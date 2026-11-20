@@ -29,64 +29,77 @@ export interface StudioPageProps {
 
 export default function StudioPage(props: StudioPageProps) {
   return (
-    <div class="studio-stack">
-      <form class="card" onSubmit={(e) => props.onGenerate(e)}>
-        <div class="card-title-row">
+    <section class="card">
+      <div class="card-title-row studio-header">
+        <div class="studio-title-group">
           <h2 class="card-title">Synthesis Studio</h2>
-          <span class="hint">
-            {props.currentCached ? "Cached locally" : "Download on demand"}
-          </span>
+          <span class="pill-value">{props.isGenerating ? "Running" : "Ready"}</span>
+          <span class="hint mono">• on-device neural voice</span>
         </div>
+        <span class="hint">
+          {props.currentCached ? "Cached locally" : "Download on demand"}
+        </span>
+      </div>
 
-        <InferenceSettings
-          languages={props.languages}
-          selectedLang={props.selectedLang}
-          onSelectLang={props.onSelectLang}
-          precision={props.precision}
-          onSelectPrecision={props.onSelectPrecision}
-          temperature={props.temperature}
-          onChangeTemperature={props.onChangeTemperature}
-        />
+      <form onSubmit={(e) => props.onGenerate(e)}>
+        <div class="studio-grid">
+          <div class="studio-col-left">
+            <InferenceSettings
+              languages={props.languages}
+              selectedLang={props.selectedLang}
+              onSelectLang={props.onSelectLang}
+              precision={props.precision}
+              onSelectPrecision={props.onSelectPrecision}
+              temperature={props.temperature}
+              onChangeTemperature={props.onChangeTemperature}
+            />
 
-        <InferenceRefVoice
-          voiceFile={props.voiceFile}
-          voicePath={props.voicePath}
-          onFileChange={props.onVoiceFileChange}
-          onPathInput={props.onVoicePathInput}
-          onClear={props.onClearVoice}
-        />
+            <InferenceRefVoice
+              voiceFile={props.voiceFile}
+              voicePath={props.voicePath}
+              onFileChange={props.onVoiceFileChange}
+              onPathInput={props.onVoicePathInput}
+              onClear={props.onClearVoice}
+            />
+          </div>
 
-        <InferenceTextarea value={props.text} onInput={props.onTextInput} />
+          <div class="studio-col-right">
+            <InferenceTextarea value={props.text} onInput={props.onTextInput} />
 
-        <div class="studio-actions">
-          <span class="studio-status">{props.status}</span>
-          <button
-            type="submit"
-            class="btn btn-primary"
-            disabled={props.isGenerating || !props.text.trim()}
-          >
-            {props.isGenerating ? "Synthesizing..." : "Generate Speech"}
-          </button>
+            <div class="studio-footer">
+              <span class="studio-status">{props.status}</span>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                disabled={props.isGenerating || !props.text.trim()}
+              >
+                <span>{props.isGenerating ? "Synthesizing..." : "Generate Speech"}</span>
+                <kbd class="studio-kbd">⌘↵</kbd>
+              </button>
+            </div>
+          </div>
         </div>
       </form>
 
       <Show when={props.audioUrl}>
         {(url) => (
-          <section class="card">
-            <h2 class="card-title">Output Audio</h2>
-            <div class="studio-audio">
-              <audio controls src={url()} />
+          <div class="studio-output">
+            <div class="card-title-row">
+              <span class="card-title">Recent Output</span>
               <a
-                class="btn btn-secondary"
+                class="btn btn-secondary btn-sm"
                 href={url()}
                 download={`pocket-tts-${props.selectedLang}.wav`}
               >
                 Download WAV
               </a>
             </div>
-          </section>
+            <div class="subcard studio-audio">
+              <audio controls src={url()} />
+            </div>
+          </div>
         )}
       </Show>
-    </div>
+    </section>
   );
 }

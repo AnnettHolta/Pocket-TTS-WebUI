@@ -1,42 +1,43 @@
 :root {
   color-scheme: dark;
 
-  /* Base surfaces */
-  --color-bg: #07090e;
-  --color-surface: rgba(18, 23, 34, 0.88);
-  --color-surface-2: #151b29;
-  --color-surface-3: #1c2436;
+  /* Apple minimalist monochrome surfaces */
+  --color-bg: #000000;
+  --color-surface: #121214;
+  --color-surface-2: #18181b;
+  --color-surface-3: #222226;
+  --color-input: #111113;
+  --color-input-focus: #141416;
 
-  /* Borders */
-  --color-border: #273147;
-  --color-border-strong: #374563;
+  /* Hairline borders */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-strong: rgba(255, 255, 255, 0.16);
+  --color-border-focus: rgba(255, 255, 255, 0.35);
 
   /* Text */
-  --color-text: #f1f5fb;
-  --color-text-muted: #93a1ba;
-  --color-text-code: #cfd9ec;
-  --color-text-on-accent: #080b12;
+  --color-text: #f5f5f7;
+  --color-text-secondary: #d4d4d8;
+  --color-text-muted: #86868b;
+  --color-text-dim: #525257;
+  --color-text-code: #e4e4e7;
+  --color-text-on-accent: #000000;
 
-  /* Brand & accents */
-  --color-accent: #6c8cff;
-  --color-accent-2: #9b7bff;
-  --color-accent-hover: #839eff;
-  --color-accent-soft: rgba(108, 140, 255, 0.14);
-  --color-accent-border: rgba(108, 140, 255, 0.28);
-  --color-accent-text: #c8d6ff;
+  /* Monochrome accents */
+  --color-accent: #ffffff;
+  --color-accent-hover: #e4e4e7;
+  --color-accent-soft: rgba(255, 255, 255, 0.06);
+  --color-accent-border: rgba(255, 255, 255, 0.1);
+  --color-accent-text: #e4e4e7;
 
   /* Semantic */
-  --color-ok: #3dd68c;
+  --color-ok: #e4e4e7;
   --color-warn: #f5b942;
   --color-danger: #f46b78;
-  --color-danger-soft: rgba(244, 107, 120, 0.1);
+  --color-danger-soft: rgba(244, 107, 120, 0.12);
 
-  /* Overlays & gradients */
+  /* Track & chips */
+  --color-track: #2a2a2e;
   --color-chip-bg: rgba(255, 255, 255, 0.04);
-  --gradient-accent: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
-  --gradient-ambient:
-    radial-gradient(900px 500px at 10% -10%, rgba(108, 140, 255, 0.16), transparent 60%),
-    radial-gradient(700px 420px at 95% 0%, rgba(155, 123, 255, 0.12), transparent 55%),
-    var(--color-bg);
+  --gradient-ambient: #000000;
 }
-

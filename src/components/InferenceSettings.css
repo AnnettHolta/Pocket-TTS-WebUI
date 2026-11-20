@@ -1,5 +1,32 @@
 .inference-settings {
+  gap: 0.9rem;
+}
+
+.temp-presets {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.25rem;
+  padding-top: 0.15rem;
+}
+
+.temp-preset-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.temp-preset-btn:hover {
+  color: var(--color-text-secondary);
+}
+
+.temp-preset-btn.active {
+  color: var(--color-text);
+  font-weight: 600;
 }

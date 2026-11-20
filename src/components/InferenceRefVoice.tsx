@@ -18,9 +18,11 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
   };
 
   return (
-    <section class="field inference-ref-voice">
+    <section class="subcard inference-ref-voice">
       <div class="field-header">
-        <label for="voice-file">Reference Voice (optional .wav)</label>
+        <label for="voice-file">
+          Voice Cloning <span class="hint">(optional)</span>
+        </label>
         <Show when={props.voiceFile || props.voicePath}>
           <button
             type="button"
@@ -32,24 +34,39 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
         </Show>
       </div>
 
-      <div class="file-box">
-        <input
-          id="voice-file"
-          type="file"
-          accept="audio/wav,audio/*"
-          onChange={handleFileInput}
-        />
-        <Show when={props.voiceFile}>
-          {(file) => <span class="hint">{file().name}</span>}
-        </Show>
-      </div>
+      <div class="ref-voice-box">
+        <div class="ref-voice-top">
+          <div class="ref-voice-info">
+            <div class="ref-voice-icon">WAV</div>
+            <div>
+              <div class="ref-voice-title">
+                {props.voiceFile ? props.voiceFile.name : "Drop reference WAV/FLAC"}
+              </div>
+              <div class="ref-voice-sub">Mono 24kHz recommended</div>
+            </div>
+          </div>
 
-      <input
-        type="text"
-        value={props.voicePath}
-        onInput={(e) => props.onPathInput(e.currentTarget.value)}
-        placeholder="Original audio path (optional note, e.g. C:\voices\speaker.wav)"
-      />
+          <input
+            id="voice-file"
+            type="file"
+            accept="audio/wav,audio/flac,audio/*"
+            class="ref-voice-hidden-input"
+            onChange={handleFileInput}
+          />
+          <label for="voice-file" class="btn btn-secondary btn-sm">
+            Choose
+          </label>
+        </div>
+
+        <div class="ref-voice-path-row">
+          <input
+            type="text"
+            value={props.voicePath}
+            onInput={(e) => props.onPathInput(e.currentTarget.value)}
+            placeholder="Path: C:\voices\speaker.wav"
+          />
+        </div>
+      </div>
     </section>
   );
 }
