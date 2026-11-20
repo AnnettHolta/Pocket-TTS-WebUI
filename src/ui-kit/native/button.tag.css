@@ -1,0 +1,10 @@
+button {
+  font-family: inherit;
+  outline: none;
+}
+
+button:focus,
+button:focus-visible {
+  outline: none;
+}
+

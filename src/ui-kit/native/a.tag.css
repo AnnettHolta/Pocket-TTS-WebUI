@@ -1,0 +1,9 @@
+a {
+  outline: none;
+}
+
+a:focus,
+a:focus-visible {
+  outline: none;
+}
+

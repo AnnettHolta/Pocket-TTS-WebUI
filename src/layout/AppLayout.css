@@ -169,3 +169,84 @@
 .app-footer a:hover {
   color: var(--color-text);
 }
+
+.app-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .app-page {
+    padding: var(--space-4) var(--space-3) calc(var(--space-10) + 4.5rem);
+    gap: var(--space-4);
+  }
+
+  .app-header-top {
+    padding-bottom: var(--space-3);
+  }
+
+  .app-badges > .badge {
+    display: none;
+  }
+
+  .app-nav-tabs {
+    display: none;
+  }
+
+  .app-footer {
+    display: none;
+  }
+
+  .app-mobile-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: rgba(18, 18, 20, 0.88);
+    backdrop-filter: blur(18px);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-1-5) var(--space-2) calc(var(--space-1-5) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-mobile-tab {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    padding: var(--space-1) 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-0-5);
+    cursor: pointer;
+    position: relative;
+    transition: color var(--transition-fast);
+  }
+
+  .app-mobile-tab.active {
+    color: var(--color-text);
+  }
+
+  .app-mobile-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    right: calc(50% - 14px);
+  }
+
+  .app-mobile-dot.ok {
+    background: var(--color-ok);
+  }
+
+  .app-mobile-dot.warn {
+    background: var(--color-warn);
+  }
+}

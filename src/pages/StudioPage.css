@@ -9,6 +9,10 @@
   .studio-grid {
     grid-template-columns: 1fr;
   }
+
+  .studio-col-right {
+    order: -1;
+  }
 }
 
 .studio-col-left,

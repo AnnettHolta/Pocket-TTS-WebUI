@@ -144,6 +144,36 @@ export default function AppLayout(props: AppLayoutProps) {
         info={props.hardwareInfo}
         onClose={() => setHardwareOpen(false)}
       />
+
+      <nav class="app-mobile-nav" aria-label="Mobile navigation">
+        <button
+          type="button"
+          class={`app-mobile-tab ${props.activePage === "studio" ? "active" : ""}`}
+          onClick={() => props.onNavigate("studio")}
+        >
+          <TbOutlineSparkles size={18} />
+          <span>{t("nav.generate")}</span>
+        </button>
+
+        <button
+          type="button"
+          class={`app-mobile-tab ${props.activePage === "history" ? "active" : ""}`}
+          onClick={() => props.onNavigate("history")}
+        >
+          <TbOutlineHistory size={18} />
+          <span>{t("nav.historyShort")}</span>
+        </button>
+
+        <button
+          type="button"
+          class={`app-mobile-tab ${hardwareOpen() ? "active" : ""}`}
+          onClick={() => setHardwareOpen(true)}
+        >
+          <span class={`app-mobile-dot ${props.webGpuAvailable ? "ok" : "warn"}`} />
+          <TbOutlineCpu size={18} />
+          <span>{t("nav.hardware")}</span>
+        </button>
+      </nav>
     </main>
   );
 }

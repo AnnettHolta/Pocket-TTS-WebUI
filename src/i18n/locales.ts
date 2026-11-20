@@ -11,7 +11,10 @@ export const LOCALE_OPTIONS: ReadonlyArray<{ code: Locale; flag: string; label: 
 export const en = {
   nav: {
     studio: "Studio",
+    generate: "Generate",
     history: "History ({{count}})",
+    historyShort: "History",
+    hardware: "Hardware",
   },
   header: {
     copied: "Copied!",
@@ -123,7 +126,10 @@ export type Dictionary = typeof en;
 export const uk: Dictionary = {
   nav: {
     studio: "Студія",
+    generate: "Синтез",
     history: "Історія ({{count}})",
+    historyShort: "Історія",
+    hardware: "Обладнання",
   },
   header: {
     copied: "Скопійовано!",
@@ -233,7 +239,10 @@ export const uk: Dictionary = {
 export const pl: Dictionary = {
   nav: {
     studio: "Studio",
+    generate: "Generuj",
     history: "Historia ({{count}})",
+    historyShort: "Historia",
+    hardware: "Sprzęt",
   },
   header: {
     copied: "Skopiowano!",
@@ -343,7 +352,10 @@ export const pl: Dictionary = {
 export const de: Dictionary = {
   nav: {
     studio: "Studio",
+    generate: "Generieren",
     history: "Verlauf ({{count}})",
+    historyShort: "Verlauf",
+    hardware: "Hardware",
   },
   header: {
     copied: "Kopiert!",
@@ -453,7 +465,10 @@ export const de: Dictionary = {
 export const zh: Dictionary = {
   nav: {
     studio: "工作室",
+    generate: "生成",
     history: "历史记录 ({{count}})",
+    historyShort: "历史",
+    hardware: "硬件",
   },
   header: {
     copied: "已复制！",

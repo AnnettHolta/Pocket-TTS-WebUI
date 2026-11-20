@@ -79,6 +79,7 @@
 .btn {
   appearance: none;
   border: 1px solid transparent;
+  outline: none;
   border-radius: var(--radius-md);
   padding: var(--pad-control);
   font: inherit;
