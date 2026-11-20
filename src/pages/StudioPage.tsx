@@ -28,7 +28,6 @@ export interface StudioPageProps {
   onClearVoice: () => void;
   text: string;
   onTextInput: (value: string) => void;
-  status: string;
   isGenerating: boolean;
   audioUrl: string | null;
   onGenerate: (e: Event) => void;
@@ -72,19 +71,22 @@ export default function StudioPage(props: StudioPageProps) {
           </div>
 
           <div class="studio-col-right">
-            <InferenceTextarea value={props.text} onInput={props.onTextInput} />
-
-            <div class="studio-footer">
-              <span class="studio-status">{props.status}</span>
-              <button
-                type="submit"
-                class="btn btn-primary"
-                disabled={props.isGenerating || !props.text.trim()}
-              >
-                <span>{props.isGenerating ? "Synthesizing..." : "Generate Speech"}</span>
-                <kbd class="studio-kbd">⌘↵</kbd>
-              </button>
-            </div>
+            <InferenceTextarea
+              value={props.text}
+              onInput={props.onTextInput}
+              footer={
+                <button
+                  type="submit"
+                  class="btn btn-primary studio-generate-btn"
+                  disabled={props.isGenerating || !props.text.trim()}
+                >
+                  <span>
+                    {props.isGenerating ? "Synthesizing..." : "Generate Speech"}
+                  </span>
+                  <kbd class="studio-kbd">⌘↵</kbd>
+                </button>
+              }
+            />
           </div>
         </div>
       </form>

@@ -1,25 +1,12 @@
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import "./InferenceTextarea.css";
 
 export interface InferenceTextareaProps {
   value: string;
   onInput: (value: string) => void;
+  footer?: JSX.Element;
 }
-
-const TEXT_PRESETS = [
-  {
-    label: "Welcome Greeting",
-    text: "Welcome to next-generation neural speech synthesis directly on your hardware.",
-  },
-  {
-    label: "Podcast Intro",
-    text: "In this episode, we explore on-device transformer models without any cloud latency.",
-  },
-  {
-    label: "Storytelling Demo",
-    text: "Once upon a quiet starlit ridge, a solitary beacon whispered stories to the constellations.",
-  },
-] as const;
 
 export default function InferenceTextarea(props: InferenceTextareaProps) {
   return (
@@ -50,20 +37,9 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
         </div>
       </div>
 
-      <div class="text-presets">
-        <span class="hint">Presets:</span>
-        <For each={TEXT_PRESETS}>
-          {(preset) => (
-            <button
-              type="button"
-              class="text-preset-chip"
-              onClick={() => props.onInput(preset.text)}
-            >
-              {preset.label}
-            </button>
-          )}
-        </For>
-      </div>
+      <Show when={props.footer}>
+        {(footer) => <div class="textarea-footer">{footer()}</div>}
+      </Show>
     </section>
   );
 }

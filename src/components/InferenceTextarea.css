@@ -3,13 +3,22 @@
   justify-content: space-between;
 }
 
+.inference-textarea > .field {
+  flex: 1;
+  min-height: 0;
+}
+
 .textarea-wrap {
   position: relative;
+  flex: 1;
+  display: flex;
 }
 
 .inference-textarea textarea {
-  resize: vertical;
-  min-height: 175px;
+  flex: 1;
+  height: 100%;
+  min-height: 180px;
+  resize: none;
   padding-right: 2.4rem;
 }
 
@@ -19,29 +28,7 @@
   right: 0.55rem;
 }
 
-.text-presets {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
+.textarea-footer {
   padding-top: 0.65rem;
   border-top: 1px solid var(--color-border-subtle);
-}
-
-.text-preset-chip {
-  appearance: none;
-  border: 1px solid var(--color-border-subtle);
-  background: var(--color-input);
-  color: var(--color-text-muted);
-  font: inherit;
-  font-size: 0.68rem;
-  padding: 0.2rem 0.52rem;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-
-.text-preset-chip:hover {
-  background: var(--color-surface-3);
-  color: var(--color-text);
 }

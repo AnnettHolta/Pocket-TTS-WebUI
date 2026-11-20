@@ -9,6 +9,7 @@ import {
   type GenerationHistoryItem,
   type PrecisionMode,
 } from "./lib/historyDb";
+import { createPreviewWavBlob } from "./lib/previewWav";
 import HistoryPage from "./pages/HistoryPage";
 import StudioPage from "./pages/StudioPage";
 
@@ -39,11 +40,8 @@ export default function App() {
   const [voicePath, setVoicePath] = createSignal<string>("");
   const [voiceTranscript, setVoiceTranscript] = createSignal<string>("");
   const [voiceSha256, setVoiceSha256] = createSignal<string | null>(null);
-  const [status, setStatus] = createSignal<string>(
-    "UI ready — backend & WebGPU worker not wired yet."
-  );
   const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
-  const [audioUrl] = createSignal<string | null>(null);
+  const [audioUrl, setAudioUrl] = createSignal<string | null>(null);
   const [webGpuAvailable, setWebGpuAvailable] = createSignal<boolean>(false);
   const [history, setHistory] = createSignal<GenerationHistoryItem[]>([]);
 
@@ -104,14 +102,15 @@ export default function App() {
     };
 
     try {
+      const prevUrl = audioUrl();
+      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      const previewBlob = createPreviewWavBlob(2.4);
+      setAudioUrl(URL.createObjectURL(previewBlob));
+
       await addHistoryItem(entry);
       setHistory((prev) => [entry, ...prev]);
-      setStatus(
-        `Saved "${generatedFileName}" to local IndexedDB history (inference worker not connected yet).`
-      );
     } catch (err) {
       console.error("Failed to save history:", err);
-      setStatus("Failed to save generation metadata to IndexedDB.");
     } finally {
       setIsGenerating(false);
     }
@@ -125,7 +124,6 @@ export default function App() {
     setVoicePath(item.voiceFilePath ?? "");
     setVoiceTranscript(item.voiceTranscript ?? "");
     setVoiceSha256(item.voiceSha256 ?? null);
-    setStatus(`Loaded settings from ${item.generatedFileName}.`);
     setActivePage("studio");
   };
 
@@ -165,7 +163,6 @@ export default function App() {
             onClearVoice={handleClearVoice}
             text={text()}
             onTextInput={setText}
-            status={status()}
             isGenerating={isGenerating()}
             audioUrl={audioUrl()}
             onGenerate={handleGenerate}
