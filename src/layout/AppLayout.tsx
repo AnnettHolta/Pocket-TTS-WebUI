@@ -10,6 +10,8 @@ import {
   TbOutlineSparkles,
 } from "solid-icons/tb";
 import Badge from "../components/Badge";
+import HardwareModal from "../components/HardwareModal";
+import type { HardwareInfo } from "../lib/hardwareInfo";
 import "./AppLayout.css";
 
 export type PageTab = "studio" | "history";
@@ -19,6 +21,7 @@ export interface AppLayoutProps {
   onNavigate: (page: PageTab) => void;
   historyCount: number;
   webGpuAvailable: boolean;
+  hardwareInfo: HardwareInfo | null;
   children: JSX.Element;
 }
 
@@ -26,6 +29,7 @@ const HF_REPO = "stephvax/pocket-tts-onnx";
 
 export default function AppLayout(props: AppLayoutProps) {
   const [copied, setCopied] = createSignal(false);
+  const [hardwareOpen, setHardwareOpen] = createSignal(false);
 
   const handleCopyRepo = () => {
     void navigator.clipboard?.writeText(HF_REPO).then(() => {
@@ -58,8 +62,12 @@ export default function AppLayout(props: AppLayoutProps) {
           </div>
 
           <div class="app-badges">
-            <Badge tone={props.webGpuAvailable ? "ok" : "warn"} dot>
-              {props.webGpuAvailable ? "WebGPU Ready" : "WASM Fallback"}
+            <Badge
+              tone={props.webGpuAvailable ? "ok" : "warn"}
+              title="Click for hardware & WebGPU debug info"
+              onClick={() => setHardwareOpen(true)}
+            >
+              {props.webGpuAvailable ? "WebGPU Ready" : "CPU Ready"}
             </Badge>
             <Badge>
               <TbOutlineDatabase size={12} />
@@ -112,6 +120,12 @@ export default function AppLayout(props: AppLayoutProps) {
           <span class="mono">CC-BY-4.0</span>
         </div>
       </footer>
+
+      <HardwareModal
+        open={hardwareOpen()}
+        info={props.hardwareInfo}
+        onClose={() => setHardwareOpen(false)}
+      />
     </main>
   );
 }

@@ -11,6 +11,19 @@
   color: var(--color-text-muted);
 }
 
+button.badge {
+  appearance: none;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: filter var(--transition-fast), border-color var(--transition-fast);
+}
+
+button.badge:hover {
+  filter: brightness(1.12);
+}
+
 .badge-dot {
   width: 6px;
   height: 6px;
@@ -20,10 +33,12 @@
 
 .badge.ok {
   color: var(--color-ok);
-  border-color: var(--color-border);
+  background: var(--color-ok-soft);
+  border-color: var(--color-ok-border);
 }
 
 .badge.warn {
   color: var(--color-warn);
-  border-color: color-mix(in srgb, var(--color-warn) 35%, var(--color-border));
+  background: var(--color-warn-soft);
+  border-color: var(--color-warn-border);
 }

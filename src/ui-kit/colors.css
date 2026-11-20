@@ -31,8 +31,12 @@
   --color-accent-text: #e4e4e7;
 
   /* Semantic */
-  --color-ok: #e4e4e7;
+  --color-ok: #4ade80;
+  --color-ok-soft: rgba(74, 222, 128, 0.1);
+  --color-ok-border: rgba(74, 222, 128, 0.25);
   --color-warn: #f5b942;
+  --color-warn-soft: rgba(245, 185, 66, 0.1);
+  --color-warn-border: rgba(245, 185, 66, 0.25);
   --color-danger: #f46b78;
   --color-danger-soft: rgba(244, 107, 120, 0.12);
 

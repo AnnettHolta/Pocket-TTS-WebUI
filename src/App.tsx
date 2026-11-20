@@ -9,6 +9,7 @@ import {
   type GenerationHistoryItem,
   type PrecisionMode,
 } from "./lib/historyDb";
+import { probeHardwareInfo, type HardwareInfo } from "./lib/hardwareInfo";
 import { createPreviewWavBlob } from "./lib/previewWav";
 import HistoryPage from "./pages/HistoryPage";
 import StudioPage from "./pages/StudioPage";
@@ -42,11 +43,17 @@ export default function App() {
   const [voiceSha256, setVoiceSha256] = createSignal<string | null>(null);
   const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
   const [audioUrl, setAudioUrl] = createSignal<string | null>(null);
-  const [webGpuAvailable, setWebGpuAvailable] = createSignal<boolean>(false);
+  const [hardwareInfo, setHardwareInfo] = createSignal<HardwareInfo | null>(null);
   const [history, setHistory] = createSignal<GenerationHistoryItem[]>([]);
 
+  const webGpuAvailable = createMemo(
+    () => hardwareInfo()?.webGpuAdapterReady ?? false
+  );
+
   onSettled(() => {
-    setWebGpuAvailable("gpu" in navigator);
+    void probeHardwareInfo()
+      .then((info) => setHardwareInfo(info))
+      .catch((err) => console.error("Hardware probe error:", err));
     void listHistory()
       .then((items) => setHistory(items))
       .catch((err) => console.error("IndexedDB load error:", err));
@@ -143,6 +150,7 @@ export default function App() {
       onNavigate={setActivePage}
       historyCount={history().length}
       webGpuAvailable={webGpuAvailable()}
+      hardwareInfo={hardwareInfo()}
     >
       <Switch>
         <Match when={activePage() === "studio"}>
@@ -150,7 +158,6 @@ export default function App() {
             languages={languages()}
             selectedLang={selectedLang()}
             onSelectLang={setSelectedLang}
-            currentCached={currentLanguage()?.cached ?? false}
             precision={precision()}
             onSelectPrecision={setPrecision}
             temperature={temperature()}

@@ -11,7 +11,6 @@ export interface StudioPageProps {
   languages: LanguageOption[];
   selectedLang: string;
   onSelectLang: (id: string) => void;
-  currentCached: boolean;
   precision: PrecisionMode;
   onSelectPrecision: (mode: PrecisionMode) => void;
   temperature: number;
@@ -37,17 +36,6 @@ export interface StudioPageProps {
 export default function StudioPage(props: StudioPageProps) {
   return (
     <section class="card">
-      <div class="card-title-row studio-header">
-        <div class="studio-title-group">
-          <h2 class="card-title">Synthesis Studio</h2>
-          <span class="pill-value">{props.isGenerating ? "Running" : "Ready"}</span>
-          <span class="hint mono">• on-device neural voice</span>
-        </div>
-        <span class="hint">
-          {props.currentCached ? "Cached locally" : "Download on demand"}
-        </span>
-      </div>
-
       <form onSubmit={(e) => props.onGenerate(e)}>
         <div class="studio-grid">
           <div class="studio-col-left">
