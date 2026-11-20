@@ -1,5 +1,6 @@
-import { For, Show } from "solid-js";
+import { Show } from "solid-js";
 import { TbOutlineTrash } from "solid-icons/tb";
+import Table, { type TableColumn } from "../components/table/Table";
 import type { GenerationHistoryItem } from "../lib/historyDb";
 import "./HistoryPage.css";
 
@@ -9,6 +10,14 @@ export interface HistoryPageProps {
   onDelete: (id: string) => void;
   onClearAll: () => void;
 }
+
+const COLUMNS: TableColumn[] = [
+  { key: "time", label: "Time", class: "history-col-time" },
+  { key: "text", label: "Text" },
+  { key: "settings", label: "Model", class: "history-col-model" },
+  { key: "files", label: "Output & Source", class: "history-col-files" },
+  { key: "actions", label: "Actions", align: "right", class: "history-col-actions" },
+];
 
 function formatTimestamp(ts: number): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -21,14 +30,15 @@ function formatTimestamp(ts: number): string {
 
 export default function HistoryPage(props: HistoryPageProps) {
   return (
-    <section class="card">
-      <div class="card-title-row">
-        <div>
-          <h2 class="card-title">Generation History ({props.items.length})</h2>
-          <p class="hint" style={{ margin: "0.2rem 0 0" }}>
-            Stored locally in IndexedDB — metadata only, no audio blobs.
-          </p>
-        </div>
+    <Table
+      title={`Generation History (${props.items.length})`}
+      subtitle="Stored locally in IndexedDB — metadata only, no audio blobs."
+      columns={COLUMNS}
+      items={props.items}
+      pageSizeOptions={[10, 25, 50, 100]}
+      defaultPageSize={10}
+      emptyMessage="No generations yet. Metadata (text, generated file name, and original voice path) will appear here after you generate speech."
+      headerActions={
         <Show when={props.items.length > 0}>
           <button
             type="button"
@@ -38,71 +48,59 @@ export default function HistoryPage(props: HistoryPageProps) {
             Clear All
           </button>
         </Show>
-      </div>
-
-      <Show
-        when={props.items.length > 0}
-        fallback={
-          <div class="history-empty">
-            No generations yet. Metadata (text, generated file name, and original voice
-            path) will appear here after you generate speech.
-          </div>
-        }
-      >
-        <div class="history-list">
-          <For each={props.items}>
-            {(item) => (
-              <article class="history-item">
-                <div class="history-top">
-                  <span class="pill-value">{item.languageLabel}</span>
-                  <span class="history-time">{formatTimestamp(item.createdAt)}</span>
-                </div>
-
-                <p class="history-text">{item.text}</p>
-
-                <div class="history-tags">
-                  <span class="history-tag">{item.precision}</span>
-                  <span class="history-tag">temp {item.temperature.toFixed(2)}</span>
-                  <Show when={item.voiceFileName}>
-                    {(name) => <span class="history-tag">voice: {name()}</span>}
-                  </Show>
-                </div>
-
-                <div class="history-files">
-                  <span>
-                    Output: <code>{item.generatedFileName}</code>
-                  </span>
-                  <Show when={item.voiceFilePath}>
-                    {(path) => (
-                      <span>
-                        Source: <code>{path()}</code>
-                      </span>
-                    )}
-                  </Show>
-                </div>
-
-                <div class="history-actions">
-                  <button
-                    type="button"
-                    class="btn btn-secondary btn-sm"
-                    onClick={() => props.onReuse(item)}
-                  >
-                    Reuse in Studio
-                  </button>
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-sm"
-                    onClick={() => props.onDelete(item.id)}
-                  >
-                    <TbOutlineTrash size={13} />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </article>
-            )}
-          </For>
-        </div>
-      </Show>
-    </section>
+      }
+      renderRow={(item) => (
+        <>
+          <td class="history-cell-time">{formatTimestamp(item.createdAt)}</td>
+          <td>
+            <div class="history-cell-text" title={item.text}>
+              {item.text}
+            </div>
+          </td>
+          <td>
+            <div class="history-cell-model">
+              <span class="history-model-name">{item.languageLabel}</span>
+              <span class="history-model-sub">
+                {item.precision} · temp {item.temperature.toFixed(2)}
+              </span>
+            </div>
+          </td>
+          <td>
+            <div class="history-cell-files">
+              <span class="history-file-line" title={item.generatedFileName}>
+                {item.generatedFileName}
+              </span>
+              <Show when={item.voiceFilePath || item.voiceFileName}>
+                <span
+                  class="history-file-line muted"
+                  title={item.voiceFilePath || item.voiceFileName || ""}
+                >
+                  src: {item.voiceFilePath || item.voiceFileName}
+                </span>
+              </Show>
+            </div>
+          </td>
+          <td class="align-right">
+            <div class="history-cell-actions">
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                onClick={() => props.onReuse(item)}
+              >
+                Reuse
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                aria-label="Delete"
+                onClick={() => props.onDelete(item.id)}
+              >
+                <TbOutlineTrash size={13} />
+              </button>
+            </div>
+          </td>
+        </>
+      )}
+    />
   );
 }
