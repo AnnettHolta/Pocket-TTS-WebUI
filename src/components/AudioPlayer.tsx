@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createEffect, createSignal, For, Show, untrack } from "solid-js";
 import {
   TbFillPlayerPause,
   TbFillPlayerPlay,
@@ -73,8 +73,10 @@ export default function AudioPlayer(props: AudioPlayerProps) {
       ws.on("ready", (dur) => {
         setDuration(dur);
         setIsReady(true);
-        ws.setVolume(volume());
-        ws.setPlaybackRate(SPEED_OPTIONS[speedIndex()]);
+        untrack(() => {
+          ws.setVolume(volume());
+          ws.setPlaybackRate(SPEED_OPTIONS[speedIndex()]);
+        });
         requestAnimationFrame(() => {
           requestAnimationFrame(() => setWavesExpanded(true));
         });

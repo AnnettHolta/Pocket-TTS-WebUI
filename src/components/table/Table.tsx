@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show, untrack } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { t } from "../../i18n";
 import TableItem from "./TableItem";
@@ -41,7 +41,7 @@ export default function Table<T>(props: TableProps<T>) {
   createEffect(
     () => totalPages(),
     (maxPage) => {
-      if (page() > maxPage) {
+      if (untrack(page) > maxPage) {
         setPage(maxPage);
       }
     }

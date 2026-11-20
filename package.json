@@ -10,6 +10,8 @@
     "build": "vite build",
     "start": "tsx server/index.ts --production",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.server.json"
   },
   "keywords": [],
@@ -30,8 +32,10 @@
     "@solidjs/vite-plugin": "^3.0.1",
     "@types/node": "^26.6.6",
     "concurrently": "^10.0.7",
+    "jsdom": "^31.0.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   }
 }

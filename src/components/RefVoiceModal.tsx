@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show, untrack } from "solid-js";
 import { TbOutlineMicrophone } from "solid-icons/tb";
 import { t } from "../i18n";
 import { computeFileSha256, getVoiceTranscript, saveVoiceTranscript } from "../lib/historyDb";
@@ -39,7 +39,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
     () => props.open,
     (isOpen) => {
       if (!isOpen) {
-        revokePreview(previewUrl());
+        revokePreview(untrack(previewUrl));
         setPreviewUrl(null);
         return;
       }
