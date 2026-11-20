@@ -1,0 +1,32 @@
+.studio-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.studio-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-top: var(--space-1);
+}
+
+.studio-status {
+  font-size: 0.83rem;
+  color: var(--color-text-muted);
+}
+
+.studio-audio {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.studio-audio audio {
+  flex: 1;
+  min-width: 240px;
+}
+

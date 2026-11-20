@@ -1,0 +1,12 @@
+.inference-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.inference-settings input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+

@@ -1,0 +1,18 @@
+.file-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  background: var(--color-surface-2);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.85rem;
+}
+
+.file-box input[type="file"] {
+  font-size: 0.83rem;
+  color: var(--color-text-muted);
+  max-width: 100%;
+}
+

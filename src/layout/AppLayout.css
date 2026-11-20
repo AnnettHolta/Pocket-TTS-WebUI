@@ -1,0 +1,98 @@
+.app-page {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-5) var(--space-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.app-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-lg);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: var(--text-lg);
+  color: var(--color-text-on-accent);
+  background: var(--gradient-accent);
+  box-shadow: var(--shadow-logo);
+}
+
+.app-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.app-subtitle {
+  margin: 0.15rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
+}
+
+.app-subtitle code {
+  font-family: var(--font-mono);
+  color: var(--color-text-code);
+  background: var(--color-chip-bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+}
+
+.app-badges {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.app-nav-tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.app-nav-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.45rem 0.95rem;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.app-nav-tab:hover {
+  color: var(--color-text);
+}
+
+.app-nav-tab.active {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+

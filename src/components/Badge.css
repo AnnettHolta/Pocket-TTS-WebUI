@@ -1,0 +1,31 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  padding: 0.36rem 0.78rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  backdrop-filter: blur(10px);
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.badge.ok {
+  color: var(--color-ok);
+  border-color: color-mix(in srgb, var(--color-ok) 35%, var(--color-border));
+}
+
+.badge.warn {
+  color: var(--color-warn);
+  border-color: color-mix(in srgb, var(--color-warn) 35%, var(--color-border));
+}
+
