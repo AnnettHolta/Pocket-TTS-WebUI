@@ -59,6 +59,12 @@
   font-family: var(--font-mono);
 }
 
+.icon-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .pill-value {
   font-family: var(--font-mono);
   font-size: var(--text-2xs);

@@ -1,4 +1,11 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
+import {
+  TbFillPlayerPause,
+  TbFillPlayerPlay,
+  TbOutlineDownload,
+  TbOutlineVolume,
+  TbOutlineVolumeOff,
+} from "solid-icons/tb";
 import WaveSurfer from "wavesurfer.js";
 import "./AudioPlayer.css";
 
@@ -125,7 +132,8 @@ export default function AudioPlayer(props: AudioPlayerProps) {
               href={props.src}
               download={name()}
             >
-              Download WAV
+              <TbOutlineDownload size={13} />
+              <span>Download WAV</span>
             </a>
           )}
         </Show>
@@ -139,7 +147,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
           onClick={togglePlay}
           aria-label={isPlaying() ? "Pause" : "Play"}
         >
-          {isPlaying() ? "❚❚" : "▶"}
+          {isPlaying() ? <TbFillPlayerPause size={13} /> : <TbFillPlayerPlay size={13} />}
         </button>
 
         <span class="audio-time">
@@ -178,21 +186,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
               aria-label="Toggle volume slider"
               aria-expanded={volumeOpen() ? "true" : "false"}
             >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <Show when={volume() > 0}>
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                </Show>
-              </svg>
+              {volume() > 0 ? <TbOutlineVolume size={15} /> : <TbOutlineVolumeOff size={15} />}
             </button>
 
             <Show when={volumeOpen()}>

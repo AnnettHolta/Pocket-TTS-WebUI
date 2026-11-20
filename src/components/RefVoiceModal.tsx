@@ -1,4 +1,5 @@
 import { createEffect, createSignal, Show } from "solid-js";
+import { TbOutlineMicrophone } from "solid-icons/tb";
 import { computeFileSha256, getVoiceTranscript, saveVoiceTranscript } from "../lib/historyDb";
 import AudioPlayer from "./AudioPlayer";
 import Modal from "./Modal";
@@ -136,7 +137,9 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
           onDrop={handleDrop}
         >
           <div class="ref-dropzone-info">
-            <div class="ref-dropzone-icon">WAV</div>
+            <div class="ref-dropzone-icon">
+              <TbOutlineMicrophone size={16} />
+            </div>
             <div>
               <div class="ref-dropzone-title">
                 {draftFile() ? draftFile()!.name : "Drop reference WAV/FLAC"}

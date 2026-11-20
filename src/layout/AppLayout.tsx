@@ -1,5 +1,14 @@
 import { createSignal } from "solid-js";
 import type { JSX } from "@solidjs/web";
+import {
+  TbOutlineCheck,
+  TbOutlineCopy,
+  TbOutlineCpu,
+  TbOutlineDatabase,
+  TbOutlineExternalLink,
+  TbOutlineHistory,
+  TbOutlineSparkles,
+} from "solid-icons/tb";
 import Badge from "../components/Badge";
 import "./AppLayout.css";
 
@@ -37,11 +46,12 @@ export default function AppLayout(props: AppLayoutProps) {
                 <span class="app-repo-label">ONNX:</span>
                 <button
                   type="button"
-                  class="app-repo-btn"
+                  class="app-repo-btn icon-label"
                   title="Click to copy repository path"
                   onClick={handleCopyRepo}
                 >
-                  {copied() ? "Copied!" : HF_REPO}
+                  <span>{copied() ? "Copied!" : HF_REPO}</span>
+                  {copied() ? <TbOutlineCheck size={11} /> : <TbOutlineCopy size={11} />}
                 </button>
               </div>
             </div>
@@ -51,25 +61,33 @@ export default function AppLayout(props: AppLayoutProps) {
             <Badge tone={props.webGpuAvailable ? "ok" : "warn"} dot>
               {props.webGpuAvailable ? "WebGPU Ready" : "WASM Fallback"}
             </Badge>
-            <Badge>IndexedDB ({props.historyCount})</Badge>
-            <Badge>Solid 2.0</Badge>
+            <Badge>
+              <TbOutlineDatabase size={12} />
+              <span>IndexedDB ({props.historyCount})</span>
+            </Badge>
+            <Badge>
+              <TbOutlineCpu size={12} />
+              <span>Solid 2.0</span>
+            </Badge>
           </div>
         </div>
 
         <nav class="app-nav-tabs" aria-label="Views">
           <button
             type="button"
-            class={`app-nav-tab ${props.activePage === "studio" ? "active" : ""}`}
+            class={`app-nav-tab icon-label ${props.activePage === "studio" ? "active" : ""}`}
             onClick={() => props.onNavigate("studio")}
           >
-            Studio
+            <TbOutlineSparkles size={14} />
+            <span>Studio</span>
           </button>
           <button
             type="button"
-            class={`app-nav-tab ${props.activePage === "history" ? "active" : ""}`}
+            class={`app-nav-tab icon-label ${props.activePage === "history" ? "active" : ""}`}
             onClick={() => props.onNavigate("history")}
           >
-            History ({props.historyCount})
+            <TbOutlineHistory size={14} />
+            <span>History ({props.historyCount})</span>
           </button>
         </nav>
       </header>
@@ -82,11 +100,13 @@ export default function AppLayout(props: AppLayoutProps) {
           <span>Zero Cloud Dependencies</span>
           <span>•</span>
           <a
+            class="icon-label"
             href="https://huggingface.co/stephvax/pocket-tts-onnx"
             target="_blank"
             rel="noreferrer"
           >
-            Hugging Face
+            <span>Hugging Face</span>
+            <TbOutlineExternalLink size={11} />
           </a>
           <span>•</span>
           <span class="mono">CC-BY-4.0</span>

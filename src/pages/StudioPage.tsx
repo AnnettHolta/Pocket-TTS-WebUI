@@ -1,4 +1,5 @@
 import { Show } from "solid-js";
+import { TbOutlineWand } from "solid-icons/tb";
 import AudioPlayer from "../components/AudioPlayer";
 import InferenceRefVoice from "../components/InferenceRefVoice";
 import InferenceSettings, { type LanguageOption } from "../components/InferenceSettings";
@@ -80,6 +81,7 @@ export default function StudioPage(props: StudioPageProps) {
                   class="btn btn-primary studio-generate-btn"
                   disabled={props.isGenerating || !props.text.trim()}
                 >
+                  <TbOutlineWand size={15} />
                   <span>
                     {props.isGenerating ? "Synthesizing..." : "Generate Speech"}
                   </span>

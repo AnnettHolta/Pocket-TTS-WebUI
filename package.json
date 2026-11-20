@@ -15,6 +15,7 @@
   "type": "module",
   "dependencies": {
     "@solidjs/web": "^2.0.3",
+    "solid-icons": "^2.0.0",
     "solid-js": "^2.0.3",
     "wavesurfer.js": "^8.1.0"
   },

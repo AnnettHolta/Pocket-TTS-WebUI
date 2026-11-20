@@ -1,5 +1,6 @@
 import { Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
+import { TbOutlineTypography, TbOutlineX } from "solid-icons/tb";
 import "./InferenceTextarea.css";
 
 export interface InferenceTextareaProps {
@@ -13,7 +14,10 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
     <section class="subcard inference-textarea">
       <div class="field">
         <div class="field-header">
-          <label for="prompt">Text to Synthesize</label>
+          <label class="icon-label" for="prompt">
+            <TbOutlineTypography size={13} />
+            <span>Text to Synthesize</span>
+          </label>
           <span class="hint mono">{props.value.length} / 2,000</span>
         </div>
 
@@ -31,7 +35,7 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
               title="Clear text"
               onClick={() => props.onInput("")}
             >
-              ×
+              <TbOutlineX size={14} />
             </button>
           </Show>
         </div>

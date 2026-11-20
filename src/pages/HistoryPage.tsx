@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js";
+import { TbOutlineTrash } from "solid-icons/tb";
 import type { GenerationHistoryItem } from "../lib/historyDb";
 import "./HistoryPage.css";
 
@@ -93,7 +94,8 @@ export default function HistoryPage(props: HistoryPageProps) {
                     class="btn btn-ghost btn-sm"
                     onClick={() => props.onDelete(item.id)}
                   >
-                    Delete
+                    <TbOutlineTrash size={13} />
+                    <span>Delete</span>
                   </button>
                 </div>
               </article>

@@ -1,4 +1,5 @@
 import { createSignal, Show } from "solid-js";
+import { TbOutlineMicrophone, TbOutlineWaveSine } from "solid-icons/tb";
 import RefVoiceModal from "./RefVoiceModal";
 import "./InferenceRefVoice.css";
 
@@ -22,8 +23,11 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
   return (
     <section class="subcard inference-ref-voice">
       <div class="field-header">
-        <label>
-          Voice Cloning <span class="hint">(optional)</span>
+        <label class="icon-label">
+          <TbOutlineWaveSine size={13} />
+          <span>
+            Voice Cloning <span class="hint">(optional)</span>
+          </span>
         </label>
         <Show when={props.voiceFile || props.voicePath || props.voiceTranscript}>
           <button
@@ -39,7 +43,9 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
       <div class="ref-voice-box">
         <div class="ref-voice-top">
           <div class="ref-voice-info">
-            <div class="ref-voice-icon">WAV</div>
+            <div class="ref-voice-icon">
+              <TbOutlineMicrophone size={15} />
+            </div>
             <div>
               <div class="ref-voice-title">
                 {props.voiceFile

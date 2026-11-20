@@ -1,4 +1,5 @@
 import { For } from "solid-js";
+import { TbOutlineStack2, TbOutlineWorld } from "solid-icons/tb";
 import type { PrecisionMode } from "../lib/historyDb";
 import "./InferenceSettings.css";
 
@@ -29,7 +30,10 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
   return (
     <section class="subcard inference-settings">
       <div class="field">
-        <label for="language">Language Model</label>
+        <label class="icon-label" for="language">
+          <TbOutlineWorld size={13} />
+          <span>Language Model</span>
+        </label>
         <select
           id="language"
           value={props.selectedLang}
@@ -42,7 +46,10 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
       </div>
 
       <div class="field">
-        <label for="precision">Quantization</label>
+        <label class="icon-label" for="precision">
+          <TbOutlineStack2 size={13} />
+          <span>Quantization</span>
+        </label>
         <select
           id="precision"
           value={props.precision}
