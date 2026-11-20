@@ -32,7 +32,7 @@ function buildGeneratedFilename(languageId: string, ts: number): string {
 
 export default function App() {
   const [activePage, setActivePage] = createSignal<PageTab>("studio");
-  const [languages] = createSignal<LanguageOption[]>(PLACEHOLDER_LANGUAGES);
+  const [languages, setLanguages] = createSignal<LanguageOption[]>(PLACEHOLDER_LANGUAGES);
   const [selectedLang, setSelectedLang] = createSignal<string>(PLACEHOLDER_LANGUAGES[0].id);
   const [precision, setPrecision] = createSignal<PrecisionMode>("mixed");
   const [temperature, setTemperature] = createSignal<number>(0.3);
@@ -57,6 +57,18 @@ export default function App() {
   );
 
   onSettled(() => {
+    void fetch("/api/languages")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { languages?: LanguageOption[] } | null) => {
+        if (data?.languages && data.languages.length > 0) {
+          setLanguages(data.languages);
+          if (!data.languages.some((l) => l.id === selectedLang())) {
+            setSelectedLang(data.languages[0].id);
+          }
+        }
+      })
+      .catch((err) => console.warn("Failed to load /api/languages:", err));
+
     void probeHardwareInfo()
       .then((info) => setHardwareInfo(info))
       .catch((err) => console.error("Hardware probe error:", err));
@@ -106,10 +118,33 @@ export default function App() {
 
     const now = Date.now();
     const lang = currentLanguage();
+    const languageId = selectedLang();
+    const precisionMode = precision();
     const file = voiceFile();
-    const generatedFileName = buildGeneratedFilename(selectedLang(), now);
+    const generatedFileName = buildGeneratedFilename(languageId, now);
 
     try {
+      setInferenceStage("Preparing model on server");
+      setInferenceProgress(0.05);
+      const prepRes = await fetch(
+        `/api/languages/${encodeURIComponent(languageId)}/prepare`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            precision: precisionMode,
+            includeEncoder: Boolean(file),
+          }),
+        }
+      );
+      if (!prepRes.ok) {
+        const errBody = (await prepRes.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errBody.error || `Server model prepare failed (${prepRes.status})`);
+      }
+      setLanguages((prev) =>
+        prev.map((l) => (l.id === languageId ? { ...l, cached: true } : l))
+      );
+
       let refAudio24k: Float32Array | undefined;
       if (file) {
         setInferenceStage("Resampling reference audio");
@@ -120,8 +155,8 @@ export default function App() {
       const result = await client.synthesize(
         {
           text: promptText,
-          languageId: selectedLang(),
-          precision: precision(),
+          languageId,
+          precision: precisionMode,
           temperature: temperature(),
           refAudio24k,
           refTranscript: voiceTranscript().trim() || undefined,
@@ -141,9 +176,9 @@ export default function App() {
         id: crypto.randomUUID(),
         createdAt: now,
         text: promptText,
-        languageId: selectedLang(),
-        languageLabel: lang?.label ?? selectedLang(),
-        precision: precision(),
+        languageId,
+        languageLabel: lang?.label ?? languageId,
+        precision: precisionMode,
         temperature: temperature(),
         voiceFileName: file ? file.name : null,
         voiceFilePath: voicePath().trim() || null,
