@@ -51,12 +51,6 @@
   gap: var(--space-2);
 }
 
-.field label {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--color-text);
-}
-
 .hint {
   font-size: 0.77rem;
   color: var(--color-text-muted);
@@ -70,28 +64,6 @@
   border: 1px solid var(--color-accent-border);
   padding: 0.12rem 0.5rem;
   border-radius: var(--radius-pill);
-}
-
-select,
-textarea,
-input[type="text"] {
-  width: 100%;
-  background: var(--color-surface-2);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0.68rem 0.85rem;
-  font: inherit;
-  font-size: var(--text-base);
-  outline: none;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-}
-
-select:focus,
-textarea:focus,
-input[type="text"]:focus {
-  border-color: var(--color-accent);
-  box-shadow: var(--shadow-focus);
 }
 
 .btn {
