@@ -37,6 +37,8 @@ export default function App() {
   );
   const [voiceFile, setVoiceFile] = createSignal<File | null>(null);
   const [voicePath, setVoicePath] = createSignal<string>("");
+  const [voiceTranscript, setVoiceTranscript] = createSignal<string>("");
+  const [voiceSha256, setVoiceSha256] = createSignal<string | null>(null);
   const [status, setStatus] = createSignal<string>(
     "UI ready — backend & WebGPU worker not wired yet."
   );
@@ -56,16 +58,23 @@ export default function App() {
     languages().find((lang) => lang.id === selectedLang())
   );
 
-  const handleVoiceFileChange = (file: File | null, detectedPath: string) => {
-    setVoiceFile(file);
-    if (file) {
-      setVoicePath(detectedPath);
-    }
+  const handleApplyVoice = (payload: {
+    file: File | null;
+    path: string;
+    transcript: string;
+    sha256: string | null;
+  }) => {
+    setVoiceFile(payload.file);
+    setVoicePath(payload.path);
+    setVoiceTranscript(payload.transcript);
+    setVoiceSha256(payload.sha256);
   };
 
   const handleClearVoice = () => {
     setVoiceFile(null);
     setVoicePath("");
+    setVoiceTranscript("");
+    setVoiceSha256(null);
   };
 
   const handleGenerate = async (e: Event) => {
@@ -89,6 +98,8 @@ export default function App() {
       temperature: temperature(),
       voiceFileName: file ? file.name : null,
       voiceFilePath: voicePath().trim() || null,
+      voiceTranscript: voiceTranscript().trim() || null,
+      voiceSha256: voiceSha256(),
       generatedFileName,
     };
 
@@ -112,6 +123,8 @@ export default function App() {
     setPrecision(item.precision);
     setTemperature(item.temperature);
     setVoicePath(item.voiceFilePath ?? "");
+    setVoiceTranscript(item.voiceTranscript ?? "");
+    setVoiceSha256(item.voiceSha256 ?? null);
     setStatus(`Loaded settings from ${item.generatedFileName}.`);
     setActivePage("studio");
   };
@@ -146,8 +159,9 @@ export default function App() {
             onChangeTemperature={setTemperature}
             voiceFile={voiceFile()}
             voicePath={voicePath()}
-            onVoiceFileChange={handleVoiceFileChange}
-            onVoicePathInput={setVoicePath}
+            voiceTranscript={voiceTranscript()}
+            voiceSha256={voiceSha256()}
+            onApplyVoice={handleApplyVoice}
             onClearVoice={handleClearVoice}
             text={text()}
             onTextInput={setText}

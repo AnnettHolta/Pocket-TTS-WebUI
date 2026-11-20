@@ -15,7 +15,8 @@
   "type": "module",
   "dependencies": {
     "@solidjs/web": "^2.0.3",
-    "solid-js": "^2.0.3"
+    "solid-js": "^2.0.3",
+    "wavesurfer.js": "^8.1.0"
   },
   "devDependencies": {
     "@solidjs/vite-plugin": "^3.0.1",

@@ -1,29 +1,31 @@
-import { Show } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import RefVoiceModal from "./RefVoiceModal";
 import "./InferenceRefVoice.css";
 
 export interface InferenceRefVoiceProps {
   voiceFile: File | null;
   voicePath: string;
-  onFileChange: (file: File | null, detectedPath: string) => void;
-  onPathInput: (path: string) => void;
+  voiceTranscript: string;
+  voiceSha256: string | null;
+  onApplyVoice: (payload: {
+    file: File | null;
+    path: string;
+    transcript: string;
+    sha256: string | null;
+  }) => void;
   onClear: () => void;
 }
 
 export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
-  const handleFileInput = (e: Event) => {
-    const input = e.currentTarget as HTMLInputElement;
-    const file = input.files?.[0] ?? null;
-    const detectedPath = file ? file.webkitRelativePath || file.name : "";
-    props.onFileChange(file, detectedPath);
-  };
+  const [modalOpen, setModalOpen] = createSignal(false);
 
   return (
     <section class="subcard inference-ref-voice">
       <div class="field-header">
-        <label for="voice-file">
+        <label>
           Voice Cloning <span class="hint">(optional)</span>
         </label>
-        <Show when={props.voiceFile || props.voicePath}>
+        <Show when={props.voiceFile || props.voicePath || props.voiceTranscript}>
           <button
             type="button"
             class="btn btn-secondary btn-sm"
@@ -40,33 +42,43 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
             <div class="ref-voice-icon">WAV</div>
             <div>
               <div class="ref-voice-title">
-                {props.voiceFile ? props.voiceFile.name : "Drop reference WAV/FLAC"}
+                {props.voiceFile
+                  ? props.voiceFile.name
+                  : props.voicePath || "Upload reference WAV/FLAC"}
               </div>
-              <div class="ref-voice-sub">Mono 24kHz recommended</div>
+              <div class="ref-voice-sub">
+                {props.voiceSha256
+                  ? `sha256: ${props.voiceSha256.slice(0, 10)}…`
+                  : "Mono 24kHz recommended"}
+              </div>
             </div>
           </div>
 
-          <input
-            id="voice-file"
-            type="file"
-            accept="audio/wav,audio/flac,audio/*"
-            class="ref-voice-hidden-input"
-            onChange={handleFileInput}
-          />
-          <label for="voice-file" class="btn btn-secondary btn-sm">
-            Choose
-          </label>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            onClick={() => setModalOpen(true)}
+          >
+            {props.voiceFile ? "Edit" : "Choose"}
+          </button>
         </div>
 
-        <div class="ref-voice-path-row">
-          <input
-            type="text"
-            value={props.voicePath}
-            onInput={(e) => props.onPathInput(e.currentTarget.value)}
-            placeholder="Path: C:\voices\speaker.wav"
-          />
-        </div>
+        <Show when={props.voiceTranscript}>
+          {(transcript) => (
+            <div class="ref-voice-transcript-preview">“{transcript()}”</div>
+          )}
+        </Show>
       </div>
+
+      <RefVoiceModal
+        open={modalOpen()}
+        initialFile={props.voiceFile}
+        initialPath={props.voicePath}
+        initialTranscript={props.voiceTranscript}
+        initialSha256={props.voiceSha256}
+        onClose={() => setModalOpen(false)}
+        onApply={props.onApplyVoice}
+      />
     </section>
   );
 }

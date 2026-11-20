@@ -14,6 +14,9 @@ importers:
       solid-js:
         specifier: ^2.0.3
         version: 2.0.3
+      wavesurfer.js:
+        specifier: ^8.1.0
+        version: 8.1.0
     devDependencies:
       '@solidjs/vite-plugin':
         specifier: ^3.0.1
@@ -579,6 +582,9 @@ packages:
       vite:
         optional: true
 
+  wavesurfer.js@8.1.0:
+    resolution: {integrity: sha512-7/FFjqZxrtZ5pYyjTbb5HPmMAwq5vx4qZRKFsMz1E1wLDVVkueKatR9RW3FjpKQTHFgCpc7VUYUpwTjyIZKLwQ==}
+
 snapshots:
 
   '@ampproject/remapping@2.3.0':
@@ -980,3 +986,5 @@ snapshots:
   vitefu@1.1.4(vite@8.3.8):
     optionalDependencies:
       vite: 8.3.8
+
+  wavesurfer.js@8.1.0: {}

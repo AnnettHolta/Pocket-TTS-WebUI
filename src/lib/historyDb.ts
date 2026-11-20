@@ -10,12 +10,23 @@ export interface GenerationHistoryItem {
   temperature: number;
   voiceFileName: string | null;
   voiceFilePath: string | null;
+  voiceTranscript?: string | null;
+  voiceSha256?: string | null;
   generatedFileName: string;
 }
 
+export interface VoiceTranscriptRecord {
+  sha256: string;
+  fileName: string;
+  filePath: string | null;
+  transcript: string;
+  updatedAt: number;
+}
+
 const DB_NAME = "pocket-tts-webui";
-const DB_VERSION = 1;
-const STORE_NAME = "history";
+const DB_VERSION = 2;
+const HISTORY_STORE = "history";
+const VOICE_TRANSCRIPT_STORE = "voiceTranscripts";
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -23,9 +34,12 @@ function openDb(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = () => {
       const db = request.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, { keyPath: "id" });
-        store.createIndex("createdAt", "createdAt", { unique: false });
+      if (!db.objectStoreNames.contains(HISTORY_STORE)) {
+        const historyStore = db.createObjectStore(HISTORY_STORE, { keyPath: "id" });
+        historyStore.createIndex("createdAt", "createdAt", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(VOICE_TRANSCRIPT_STORE)) {
+        db.createObjectStore(VOICE_TRANSCRIPT_STORE, { keyPath: "sha256" });
       }
     };
 
@@ -34,11 +48,51 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+export async function computeFileSha256(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  const bytes = new Uint8Array(digest);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function getVoiceTranscript(
+  sha256: string
+): Promise<VoiceTranscriptRecord | null> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOICE_TRANSCRIPT_STORE, "readonly");
+    const store = tx.objectStore(VOICE_TRANSCRIPT_STORE);
+    const request = store.get(sha256);
+
+    request.onsuccess = () =>
+      resolve((request.result as VoiceTranscriptRecord | undefined) ?? null);
+    request.onerror = () =>
+      reject(request.error ?? new Error("Failed to read voice transcript"));
+    tx.oncomplete = () => db.close();
+  });
+}
+
+export async function saveVoiceTranscript(
+  record: VoiceTranscriptRecord
+): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(VOICE_TRANSCRIPT_STORE, "readwrite");
+    const store = tx.objectStore(VOICE_TRANSCRIPT_STORE);
+    const request = store.put(record);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () =>
+      reject(request.error ?? new Error("Failed to save voice transcript"));
+    tx.oncomplete = () => db.close();
+  });
+}
+
 export async function listHistory(): Promise<GenerationHistoryItem[]> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(HISTORY_STORE, "readonly");
+    const store = tx.objectStore(HISTORY_STORE);
     const request = store.getAll();
 
     request.onsuccess = () => {
@@ -54,8 +108,8 @@ export async function listHistory(): Promise<GenerationHistoryItem[]> {
 export async function addHistoryItem(item: GenerationHistoryItem): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(HISTORY_STORE, "readwrite");
+    const store = tx.objectStore(HISTORY_STORE);
     const request = store.put(item);
 
     request.onsuccess = () => resolve();
@@ -67,8 +121,8 @@ export async function addHistoryItem(item: GenerationHistoryItem): Promise<void>
 export async function deleteHistoryItem(id: string): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(HISTORY_STORE, "readwrite");
+    const store = tx.objectStore(HISTORY_STORE);
     const request = store.delete(id);
 
     request.onsuccess = () => resolve();
@@ -80,8 +134,8 @@ export async function deleteHistoryItem(id: string): Promise<void> {
 export async function clearHistory(): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
+    const tx = db.transaction(HISTORY_STORE, "readwrite");
+    const store = tx.objectStore(HISTORY_STORE);
     const request = store.clear();
 
     request.onsuccess = () => resolve();
@@ -89,4 +143,3 @@ export async function clearHistory(): Promise<void> {
     tx.oncomplete = () => db.close();
   });
 }
-

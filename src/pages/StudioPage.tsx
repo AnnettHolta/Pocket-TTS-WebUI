@@ -1,4 +1,5 @@
 import { Show } from "solid-js";
+import AudioPlayer from "../components/AudioPlayer";
 import InferenceRefVoice from "../components/InferenceRefVoice";
 import InferenceSettings, { type LanguageOption } from "../components/InferenceSettings";
 import InferenceTextarea from "../components/InferenceTextarea";
@@ -16,8 +17,14 @@ export interface StudioPageProps {
   onChangeTemperature: (value: number) => void;
   voiceFile: File | null;
   voicePath: string;
-  onVoiceFileChange: (file: File | null, detectedPath: string) => void;
-  onVoicePathInput: (path: string) => void;
+  voiceTranscript: string;
+  voiceSha256: string | null;
+  onApplyVoice: (payload: {
+    file: File | null;
+    path: string;
+    transcript: string;
+    sha256: string | null;
+  }) => void;
   onClearVoice: () => void;
   text: string;
   onTextInput: (value: string) => void;
@@ -57,8 +64,9 @@ export default function StudioPage(props: StudioPageProps) {
             <InferenceRefVoice
               voiceFile={props.voiceFile}
               voicePath={props.voicePath}
-              onFileChange={props.onVoiceFileChange}
-              onPathInput={props.onVoicePathInput}
+              voiceTranscript={props.voiceTranscript}
+              voiceSha256={props.voiceSha256}
+              onApplyVoice={props.onApplyVoice}
               onClear={props.onClearVoice}
             />
           </div>
@@ -84,19 +92,10 @@ export default function StudioPage(props: StudioPageProps) {
       <Show when={props.audioUrl}>
         {(url) => (
           <div class="studio-output">
-            <div class="card-title-row">
-              <span class="card-title">Recent Output</span>
-              <a
-                class="btn btn-secondary btn-sm"
-                href={url()}
-                download={`pocket-tts-${props.selectedLang}.wav`}
-              >
-                Download WAV
-              </a>
-            </div>
-            <div class="subcard studio-audio">
-              <audio controls src={url()} />
-            </div>
+            <AudioPlayer
+              src={url()}
+              downloadName={`pocket-tts-${props.selectedLang}.wav`}
+            />
           </div>
         )}
       </Show>
