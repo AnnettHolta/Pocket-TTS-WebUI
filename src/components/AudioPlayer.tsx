@@ -1,4 +1,4 @@
-import { createEffect, createSignal, Show } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 import WaveSurfer from "wavesurfer.js";
 import "./AudioPlayer.css";
 
@@ -11,9 +11,10 @@ export interface AudioPlayerProps {
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.75, 2] as const;
 
 function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return "0:00.0";
-  const mins = Math.floor(seconds / 60);
-  const secs = (seconds % 60).toFixed(1).padStart(4, "0");
+  if (!Number.isFinite(seconds) || seconds < 0) return "00:00";
+  const total = Math.floor(seconds);
+  const mins = String(Math.floor(total / 60)).padStart(2, "0");
+  const secs = String(total % 60).padStart(2, "0");
   return `${mins}:${secs}`;
 }
 
@@ -27,6 +28,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
   let volumeWrapRef: HTMLDivElement | undefined;
 
   const [isReady, setIsReady] = createSignal(false);
+  const [wavesExpanded, setWavesExpanded] = createSignal(false);
   const [isPlaying, setIsPlaying] = createSignal(false);
   const [currentTime, setCurrentTime] = createSignal(0);
   const [duration, setDuration] = createSignal(0);
@@ -40,6 +42,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
       if (!containerRef || !src) return;
 
       setIsReady(false);
+      setWavesExpanded(false);
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
@@ -64,6 +67,9 @@ export default function AudioPlayer(props: AudioPlayerProps) {
         setIsReady(true);
         ws.setVolume(volume());
         ws.setPlaybackRate(SPEED_OPTIONS[speedIndex()]);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setWavesExpanded(true));
+        });
       });
       ws.on("timeupdate", (time) => setCurrentTime(time));
       ws.on("play", () => setIsPlaying(true));
@@ -140,7 +146,17 @@ export default function AudioPlayer(props: AudioPlayerProps) {
           {formatTime(currentTime())} / {formatTime(duration())}
         </span>
 
-        <div class="audio-waveform" ref={containerRef} />
+        <div class="audio-waveform">
+          <div class={`audio-waveform-flat ${wavesExpanded() ? "hidden" : ""}`}>
+            <For each={Array.from({ length: 120 })}>
+              {() => <span class="audio-waveform-dot" />}
+            </For>
+          </div>
+          <div
+            class={`audio-waveform-canvas ${wavesExpanded() ? "expanded" : ""}`}
+            ref={containerRef}
+          />
+        </div>
 
         <div class="audio-controls">
           <button

@@ -67,9 +67,51 @@
 }
 
 .audio-waveform {
+  position: relative;
   flex: 1;
   min-width: 80px;
+  height: 28px;
   cursor: pointer;
+  overflow: hidden;
+}
+
+.audio-waveform-canvas {
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  transform: scaleY(0.08);
+  opacity: 0;
+  transition:
+    transform 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease;
+}
+
+.audio-waveform-canvas.expanded {
+  transform: scaleY(1);
+  opacity: 1;
+}
+
+.audio-waveform-flat {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.22s ease;
+}
+
+.audio-waveform-flat.hidden {
+  opacity: 0;
+}
+
+.audio-waveform-dot {
+  width: 2px;
+  height: 2px;
+  border-radius: 99px;
+  background: #3f3f46;
+  flex-shrink: 0;
 }
 
 .audio-controls {
