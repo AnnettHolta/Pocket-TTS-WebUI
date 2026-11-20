@@ -35,7 +35,7 @@ export default function App() {
   const [languages, setLanguages] = createSignal<LanguageOption[]>(PLACEHOLDER_LANGUAGES);
   const [selectedLang, setSelectedLang] = createSignal<string>(PLACEHOLDER_LANGUAGES[0].id);
   const [precision, setPrecision] = createSignal<PrecisionMode>("mixed");
-  const [temperature, setTemperature] = createSignal<number>(0.3);
+  const [temperature, setTemperature] = createSignal<number>(0.35);
   const [text, setText] = createSignal<string>(
     "Hello! This is Pocket TTS running locally in the browser."
   );

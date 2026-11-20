@@ -1,6 +1,6 @@
 :root {
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, system-ui, sans-serif;
+  --font-sans: "Noto Sans", -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
   --font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --text-2xs: 0.68rem;
@@ -11,14 +11,23 @@
   --text-xl: 1.05rem;
 
   /* Spacing scale */
+  --space-0-5: 0.125rem;
   --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
   --space-2: 0.5rem;
+  --space-2-5: 0.625rem;
   --space-3: 0.75rem;
   --space-4: 1rem;
   --space-5: 1.25rem;
   --space-6: 1.5rem;
   --space-8: 2rem;
   --space-10: 3rem;
+
+  /* Component & control padding */
+  --pad-control: var(--space-2) var(--space-3);
+  --pad-control-sm: var(--space-1) var(--space-2-5);
+  --pad-card: var(--space-5) var(--space-6);
+  --pad-subcard: var(--space-4);
 
   /* Radii */
   --radius-sm: 6px;

@@ -1,5 +1,6 @@
 import { createEffect, createSignal, Show } from "solid-js";
 import { TbOutlineMicrophone } from "solid-icons/tb";
+import { t } from "../i18n";
 import { computeFileSha256, getVoiceTranscript, saveVoiceTranscript } from "../lib/historyDb";
 import AudioPlayer from "./AudioPlayer";
 import Modal from "./Modal";
@@ -125,7 +126,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
   };
 
   return (
-    <Modal open={props.open} title="Reference Voice & Transcript" onClose={props.onClose}>
+    <Modal open={props.open} title={t("refVoice.modalTitle")} onClose={props.onClose}>
       <div class="ref-modal-body">
         <div
           class={`ref-dropzone ${isDragging() ? "dragging" : ""}`}
@@ -142,11 +143,9 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
             </div>
             <div>
               <div class="ref-dropzone-title">
-                {draftFile() ? draftFile()!.name : "Drop reference WAV/FLAC"}
+                {draftFile() ? draftFile()!.name : t("refVoice.dropTitle")}
               </div>
-              <div class="ref-dropzone-sub">
-                Audio stays in runtime memory only • Transcript saved in IndexedDB
-              </div>
+              <div class="ref-dropzone-sub">{t("refVoice.dropSub")}</div>
             </div>
           </div>
 
@@ -158,7 +157,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
             onChange={handleFileInput}
           />
           <label for="ref-modal-file" class="btn btn-secondary btn-sm">
-            Choose
+            {t("refVoice.choose")}
           </label>
         </div>
 
@@ -166,23 +165,21 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
           <div class="ref-modal-hash-row">
             <span class="pill-value">
               {isHashing()
-                ? "Computing SHA-256..."
+                ? t("refVoice.hashing")
                 : `sha256: ${draftSha256()!.slice(0, 12)}…`}
             </span>
             <Show when={matchedStored()}>
-              <span class="ref-modal-match">
-                Matched SHA-256 — loaded stored transcript
-              </span>
+              <span class="ref-modal-match">{t("refVoice.matched")}</span>
             </Show>
           </div>
         </Show>
 
         <Show when={previewUrl()}>
-          {(url) => <AudioPlayer src={url()} title="Reference Audio Preview" />}
+          {(url) => <AudioPlayer src={url()} title={t("refVoice.previewTitle")} />}
         </Show>
 
         <div class="field">
-          <label for="ref-modal-path">Original Audio Path (optional)</label>
+          <label for="ref-modal-path">{t("refVoice.pathLabel")}</label>
           <input
             id="ref-modal-path"
             type="text"
@@ -194,15 +191,17 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
 
         <div class="field">
           <div class="field-header">
-            <label for="ref-modal-transcript">Reference Transcript</label>
-            <span class="hint mono">{draftTranscript().length} chars</span>
+            <label for="ref-modal-transcript">{t("refVoice.transcriptLabel")}</label>
+            <span class="hint mono">
+              {t("refVoice.chars", { count: draftTranscript().length })}
+            </span>
           </div>
           <textarea
             id="ref-modal-transcript"
             class="ref-modal-textarea"
             value={draftTranscript()}
             onInput={(e) => setDraftTranscript(e.currentTarget.value)}
-            placeholder="Enter what is spoken in the reference audio..."
+            placeholder={t("refVoice.transcriptPlaceholder")}
           />
         </div>
 
@@ -212,7 +211,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
             class="btn btn-secondary"
             onClick={() => props.onClose()}
           >
-            Cancel
+            {t("refVoice.cancel")}
           </button>
           <button
             type="button"
@@ -220,7 +219,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
             disabled={isHashing()}
             onClick={() => void handleSave()}
           >
-            Save & Apply
+            {t("refVoice.save")}
           </button>
         </div>
       </div>

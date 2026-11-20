@@ -4,6 +4,7 @@ import AudioPlayer from "../components/AudioPlayer";
 import InferenceRefVoice from "../components/InferenceRefVoice";
 import InferenceSettings, { type LanguageOption } from "../components/InferenceSettings";
 import InferenceTextarea from "../components/InferenceTextarea";
+import { t } from "../i18n";
 import type { PrecisionMode } from "../lib/historyDb";
 import "./StudioPage.css";
 
@@ -40,13 +41,13 @@ export interface StudioPageProps {
 
 export default function StudioPage(props: StudioPageProps) {
   const buttonLabel = () => {
-    if (!props.isGenerating) return "Generate Speech";
+    if (!props.isGenerating) return t("studio.generate");
     const pct = Math.round(props.inferenceProgress * 100);
     const stageText = props.inferenceStage
       ? `${props.inferenceStage} (${pct}%)`
-      : "Synthesizing...";
+      : t("studio.synthesizing");
     return props.queueLength > 1
-      ? `${stageText} • Queue ${props.queueLength}`
+      ? `${stageText} • ${t("studio.queueSuffix", { count: props.queueLength })}`
       : stageText;
   };
   return (
@@ -102,7 +103,7 @@ export default function StudioPage(props: StudioPageProps) {
                     class="btn btn-ghost btn-sm"
                     onClick={() => props.onDismissError()}
                   >
-                    Dismiss
+                    {t("studio.dismiss")}
                   </button>
                 </div>
               )}

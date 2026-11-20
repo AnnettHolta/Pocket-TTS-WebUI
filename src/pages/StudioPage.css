@@ -15,7 +15,7 @@
 .studio-col-right {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .studio-col-right > .inference-textarea {
@@ -27,8 +27,8 @@
 }
 
 .studio-error {
-  margin-top: 0.75rem;
-  padding: 0.6rem 0.8rem;
+  margin-top: var(--space-3);
+  padding: var(--pad-control);
   border-radius: var(--radius-md);
   background: var(--color-danger-soft);
   border: 1px solid color-mix(in srgb, var(--color-danger) 35%, transparent);
@@ -42,10 +42,10 @@
 
 .studio-kbd {
   font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: var(--text-2xs);
   background: rgba(0, 0, 0, 0.12);
   color: #3f3f46;
-  padding: 0.08rem 0.3rem;
+  padding: var(--space-0-5) var(--space-1);
   border-radius: 4px;
 }
 

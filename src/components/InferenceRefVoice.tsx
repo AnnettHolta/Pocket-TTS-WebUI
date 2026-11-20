@@ -1,5 +1,6 @@
 import { createSignal, Show } from "solid-js";
 import { TbOutlineMicrophone, TbOutlineWaveSine } from "solid-icons/tb";
+import { t } from "../i18n";
 import RefVoiceModal from "./RefVoiceModal";
 import "./InferenceRefVoice.css";
 
@@ -26,7 +27,7 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
         <label class="icon-label">
           <TbOutlineWaveSine size={13} />
           <span>
-            Voice Cloning <span class="hint">(optional)</span>
+            {t("refVoice.title")} <span class="hint">{t("refVoice.optional")}</span>
           </span>
         </label>
         <Show when={props.voiceFile || props.voicePath || props.voiceTranscript}>
@@ -35,7 +36,7 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
             class="btn btn-secondary btn-sm"
             onClick={() => props.onClear()}
           >
-            Clear
+            {t("refVoice.clear")}
           </button>
         </Show>
       </div>
@@ -50,12 +51,12 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
               <div class="ref-voice-title">
                 {props.voiceFile
                   ? props.voiceFile.name
-                  : props.voicePath || "Upload reference WAV/FLAC"}
+                  : props.voicePath || t("refVoice.uploadPrompt")}
               </div>
               <div class="ref-voice-sub">
                 {props.voiceSha256
                   ? `sha256: ${props.voiceSha256.slice(0, 10)}…`
-                  : "Mono 24kHz recommended"}
+                  : t("refVoice.recommended")}
               </div>
             </div>
           </div>
@@ -65,7 +66,7 @@ export default function InferenceRefVoice(props: InferenceRefVoiceProps) {
             class="btn btn-secondary btn-sm"
             onClick={() => setModalOpen(true)}
           >
-            {props.voiceFile ? "Edit" : "Choose"}
+            {props.voiceFile ? t("refVoice.edit") : t("refVoice.choose")}
           </button>
         </div>
 

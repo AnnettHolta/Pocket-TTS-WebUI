@@ -1,4 +1,5 @@
 import { Show } from "solid-js";
+import { t } from "../i18n";
 import type { HardwareInfo } from "../lib/hardwareInfo";
 import Modal from "./Modal";
 import "./HardwareModal.css";
@@ -12,80 +13,86 @@ export interface HardwareModalProps {
 export default function HardwareModal(props: HardwareModalProps) {
   const gpuSummary = () => {
     const info = props.info;
-    if (!info) return "Probing...";
+    if (!info) return t("hardware.probing");
     return (
       info.gpuDescription ||
       [info.gpuVendor, info.gpuArchitecture, info.gpuDevice].filter(Boolean).join(" • ") ||
       info.webglRenderer ||
-      "Unavailable"
+      t("hardware.unavailable")
     );
   };
 
   return (
-    <Modal open={props.open} title="Hardware & Execution Debug" onClose={props.onClose}>
-      <Show when={props.info} fallback={<p class="hint">Probing hardware...</p>}>
+    <Modal open={props.open} title={t("hardware.title")} onClose={props.onClose}>
+      <Show when={props.info} fallback={<p class="hint">{t("hardware.probing")}</p>}>
         {(info) => (
           <div class="hw-grid">
             <div class="hw-item">
-              <span class="hw-label">Execution Provider</span>
+              <span class="hw-label">{t("hardware.provider")}</span>
               <span class={`hw-value ${info().webGpuAdapterReady ? "ok" : "warn"}`}>
                 {info().hardwareAcceleration}
               </span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">Hardware FP16 (shader-f16)</span>
+              <span class="hw-label">{t("hardware.fp16")}</span>
               <span class={`hw-value ${info().fp16Supported ? "ok" : ""}`}>
-                {info().fp16Supported ? "Enabled" : "Not reported"}
+                {info().fp16Supported
+                  ? t("hardware.fp16Enabled")
+                  : t("hardware.fp16NotReported")}
               </span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">FP32 Precision</span>
+              <span class="hw-label">{t("hardware.fp32")}</span>
               <span class={`hw-value ${info().fp32Baseline ? "ok" : "warn"}`}>
-                {info().fp32Baseline ? "Baseline (Supported)" : "Unavailable"}
+                {info().fp32Baseline ? t("hardware.fp32Baseline") : t("hardware.unavailable")}
               </span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">INT8 Acceleration (WASM SIMD)</span>
+              <span class="hw-label">{t("hardware.int8Simd")}</span>
               <span class={`hw-value ${info().wasmSimdInt8 ? "ok" : "warn"}`}>
-                {info().wasmSimdInt8 ? "v128 SIMD Enabled" : "Scalar fallback"}
+                {info().wasmSimdInt8 ? t("hardware.simdEnabled") : t("hardware.simdScalar")}
               </span>
             </div>
 
             <div class="hw-item full">
-              <span class="hw-label">GPU Adapter / Renderer</span>
+              <span class="hw-label">{t("hardware.gpuAdapter")}</span>
               <span class="hw-value">{gpuSummary()}</span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">CPU Logical Cores</span>
+              <span class="hw-label">{t("hardware.cpuCores")}</span>
               <span class="hw-value">
-                {info().cpuCores !== null ? `${info().cpuCores} threads` : "Unknown"}
+                {info().cpuCores !== null
+                  ? t("hardware.threads", { count: info().cpuCores! })
+                  : t("hardware.unknown")}
               </span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">Device Memory</span>
+              <span class="hw-label">{t("hardware.memory")}</span>
               <span class="hw-value">
-                {info().deviceMemoryGB !== null ? `~${info().deviceMemoryGB} GB` : "Not exposed"}
+                {info().deviceMemoryGB !== null
+                  ? `~${info().deviceMemoryGB} GB`
+                  : t("hardware.notExposed")}
               </span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">Max WebGPU Buffer</span>
+              <span class="hw-label">{t("hardware.maxBuffer")}</span>
               <span class="hw-value">
                 {info().maxBufferSizeMB !== null ? `${info().maxBufferSizeMB} MB` : "N/A"}
               </span>
             </div>
 
             <div class="hw-item">
-              <span class="hw-label">WASM Threads (COI / SAB)</span>
+              <span class="hw-label">{t("hardware.wasmThreads")}</span>
               <span class="hw-value">
                 {info().crossOriginIsolated && info().sharedArrayBuffer
-                  ? "Enabled"
-                  : "Single-thread"}
+                  ? t("hardware.enabled")
+                  : t("hardware.singleThread")}
               </span>
             </div>
           </div>
@@ -94,7 +101,7 @@ export default function HardwareModal(props: HardwareModalProps) {
 
       <div class="hw-footer">
         <button type="button" class="btn btn-secondary" onClick={() => props.onClose()}>
-          Close
+          {t("hardware.close")}
         </button>
       </div>
     </Modal>

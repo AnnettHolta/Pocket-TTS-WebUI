@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { TbOutlineTypography, TbOutlineX } from "solid-icons/tb";
+import { t } from "../i18n";
 import "./InferenceTextarea.css";
 
 export interface InferenceTextareaProps {
@@ -16,7 +17,7 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
         <div class="field-header">
           <label class="icon-label" for="prompt">
             <TbOutlineTypography size={13} />
-            <span>Text to Synthesize</span>
+            <span>{t("textarea.label")}</span>
           </label>
           <span class="hint mono">{props.value.length} / 2,000</span>
         </div>
@@ -26,13 +27,13 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
             id="prompt"
             value={props.value}
             onInput={(e) => props.onInput(e.currentTarget.value)}
-            placeholder="Type text here to generate on-device audio..."
+            placeholder={t("textarea.placeholder")}
           />
           <Show when={props.value.length > 0}>
             <button
               type="button"
               class="btn btn-ghost btn-sm textarea-clear"
-              title="Clear text"
+              title={t("textarea.clearTitle")}
               onClick={() => props.onInput("")}
             >
               <TbOutlineX size={14} />

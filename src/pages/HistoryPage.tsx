@@ -1,6 +1,7 @@
-import { Show } from "solid-js";
+import { createMemo, Show } from "solid-js";
 import { TbOutlineTrash } from "solid-icons/tb";
 import Table, { type TableColumn } from "../components/table/Table";
+import { t } from "../i18n";
 import type { GenerationHistoryItem } from "../lib/historyDb";
 import "./HistoryPage.css";
 
@@ -10,14 +11,6 @@ export interface HistoryPageProps {
   onDelete: (id: string) => void;
   onClearAll: () => void;
 }
-
-const COLUMNS: TableColumn[] = [
-  { key: "time", label: "Time", class: "history-col-time" },
-  { key: "text", label: "Text" },
-  { key: "settings", label: "Model", class: "history-col-model" },
-  { key: "files", label: "Output & Source", class: "history-col-files" },
-  { key: "actions", label: "Actions", align: "right", class: "history-col-actions" },
-];
 
 function formatTimestamp(ts: number): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -29,15 +22,28 @@ function formatTimestamp(ts: number): string {
 }
 
 export default function HistoryPage(props: HistoryPageProps) {
+  const columns = createMemo<TableColumn[]>(() => [
+    { key: "time", label: t("history.colTime"), class: "history-col-time" },
+    { key: "text", label: t("history.colText") },
+    { key: "settings", label: t("history.colModel"), class: "history-col-model" },
+    { key: "files", label: t("history.colFiles"), class: "history-col-files" },
+    {
+      key: "actions",
+      label: t("history.colActions"),
+      align: "right",
+      class: "history-col-actions",
+    },
+  ]);
+
   return (
     <Table
-      title={`Generation History (${props.items.length})`}
-      subtitle="Stored locally in IndexedDB — metadata only, no audio blobs."
-      columns={COLUMNS}
+      title={t("history.title", { count: props.items.length })}
+      subtitle={t("history.subtitle")}
+      columns={columns()}
       items={props.items}
       pageSizeOptions={[10, 25, 50, 100]}
       defaultPageSize={10}
-      emptyMessage="No generations yet. Metadata (text, generated file name, and original voice path) will appear here after you generate speech."
+      emptyMessage={t("history.empty")}
       headerActions={
         <Show when={props.items.length > 0}>
           <button
@@ -45,7 +51,7 @@ export default function HistoryPage(props: HistoryPageProps) {
             class="btn btn-ghost btn-sm"
             onClick={() => props.onClearAll()}
           >
-            Clear All
+            {t("history.clearAll")}
           </button>
         </Show>
       }
@@ -87,12 +93,12 @@ export default function HistoryPage(props: HistoryPageProps) {
                 class="btn btn-secondary btn-sm"
                 onClick={() => props.onReuse(item)}
               >
-                Reuse
+                {t("history.reuse")}
               </button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
-                aria-label="Delete"
+                aria-label={t("history.delete")}
                 onClick={() => props.onDelete(item.id)}
               >
                 <TbOutlineTrash size={13} />

@@ -1,5 +1,6 @@
 import { createMemo, For } from "solid-js";
 import { TbOutlineChevronLeft, TbOutlineChevronRight } from "solid-icons/tb";
+import { t } from "../../i18n";
 import "./TablePagination.css";
 
 export interface TablePaginationProps {
@@ -37,7 +38,11 @@ export default function TablePagination(props: TablePaginationProps) {
   return (
     <div class="table-pagination">
       <span class="table-pagination-info">
-        Showing {rangeStart()}–{rangeEnd()} of {props.totalItems}
+        {t("table.showing", {
+          start: rangeStart(),
+          end: rangeEnd(),
+          total: props.totalItems,
+        })}
       </span>
 
       <div class="table-pagination-controls">

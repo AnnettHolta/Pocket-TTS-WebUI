@@ -7,6 +7,7 @@ import {
   TbOutlineVolumeOff,
 } from "solid-icons/tb";
 import WaveSurfer from "wavesurfer.js";
+import { t } from "../i18n";
 import "./AudioPlayer.css";
 
 export interface AudioPlayerProps {
@@ -124,7 +125,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
   return (
     <section class="audio-player">
       <div class="audio-player-header">
-        <span class="audio-player-title">{props.title ?? "Recent Output"}</span>
+        <span class="audio-player-title">{props.title ?? t("player.recentOutput")}</span>
         <Show when={props.downloadName}>
           {(name) => (
             <a
@@ -133,7 +134,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
               download={name()}
             >
               <TbOutlineDownload size={13} />
-              <span>Download WAV</span>
+              <span>{t("player.downloadWav")}</span>
             </a>
           )}
         </Show>

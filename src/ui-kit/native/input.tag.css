@@ -4,9 +4,9 @@ input[type="text"] {
   color: var(--color-text);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 0.48rem 0.7rem;
+  padding: var(--pad-control);
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
   outline: none;
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }

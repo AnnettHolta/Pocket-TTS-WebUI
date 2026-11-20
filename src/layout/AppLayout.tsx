@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js";
+import { createSignal, For } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import {
   TbOutlineCheck,
@@ -11,6 +11,7 @@ import {
 } from "solid-icons/tb";
 import Badge from "../components/Badge";
 import HardwareModal from "../components/HardwareModal";
+import { locale, LOCALE_OPTIONS, setLocale, t, type Locale } from "../i18n";
 import type { HardwareInfo } from "../lib/hardwareInfo";
 import "./AppLayout.css";
 
@@ -54,7 +55,7 @@ export default function AppLayout(props: AppLayoutProps) {
                   title="Click to copy repository path"
                   onClick={handleCopyRepo}
                 >
-                  <span>{copied() ? "Copied!" : HF_REPO}</span>
+                  <span>{copied() ? t("header.copied") : HF_REPO}</span>
                   {copied() ? <TbOutlineCheck size={11} /> : <TbOutlineCopy size={11} />}
                 </button>
               </div>
@@ -64,19 +65,34 @@ export default function AppLayout(props: AppLayoutProps) {
           <div class="app-badges">
             <Badge
               tone={props.webGpuAvailable ? "ok" : "warn"}
-              title="Click for hardware & WebGPU debug info"
+              title={t("header.hardwareTitle")}
               onClick={() => setHardwareOpen(true)}
             >
-              {props.webGpuAvailable ? "WebGPU Ready" : "CPU Ready"}
+              {props.webGpuAvailable ? t("header.webgpuReady") : t("header.cpuReady")}
             </Badge>
             <Badge>
               <TbOutlineDatabase size={12} />
-              <span>IndexedDB ({props.historyCount})</span>
+              <span>{t("header.indexedDb", { count: props.historyCount })}</span>
             </Badge>
             <Badge>
               <TbOutlineCpu size={12} />
               <span>Solid 2.0</span>
             </Badge>
+            <select
+              class="app-locale-select"
+              aria-label="UI Language"
+              value={locale()}
+              onChange={(e) => setLocale(e.currentTarget.value as Locale)}
+            >
+              <For each={LOCALE_OPTIONS}>
+                {(opt) => (
+                  <option value={opt.code}>
+                    <span class="app-locale-flag">{opt.flag}</span>{" "}
+                    <span>{opt.label}</span>
+                  </option>
+                )}
+              </For>
+            </select>
           </div>
         </div>
 
@@ -87,7 +103,7 @@ export default function AppLayout(props: AppLayoutProps) {
             onClick={() => props.onNavigate("studio")}
           >
             <TbOutlineSparkles size={14} />
-            <span>Studio</span>
+            <span>{t("nav.studio")}</span>
           </button>
           <button
             type="button"
@@ -95,7 +111,7 @@ export default function AppLayout(props: AppLayoutProps) {
             onClick={() => props.onNavigate("history")}
           >
             <TbOutlineHistory size={14} />
-            <span>History ({props.historyCount})</span>
+            <span>{t("nav.history", { count: props.historyCount })}</span>
           </button>
         </nav>
       </header>
@@ -103,9 +119,11 @@ export default function AppLayout(props: AppLayoutProps) {
       <div class="app-content">{props.children}</div>
 
       <footer class="app-footer">
-        <span>PocketTTS ONNX Engine • {props.webGpuAvailable ? "WebGPU" : "WASM"}</span>
+        <span>
+          {t("footer.engine")} • {props.webGpuAvailable ? "WebGPU" : "WASM"}
+        </span>
         <div class="app-footer-links">
-          <span>Zero Cloud Dependencies</span>
+          <span>{t("footer.zeroCloud")}</span>
           <span>•</span>
           <a
             class="icon-label"

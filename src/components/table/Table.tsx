@@ -1,5 +1,6 @@
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
+import { t } from "../../i18n";
 import TableItem from "./TableItem";
 import TablePagination from "./TablePagination";
 import "./Table.css";
@@ -69,7 +70,7 @@ export default function Table<T>(props: TableProps<T>) {
         <div class="table-toolbar-right">
           {props.headerActions}
           <label class="table-size-label" for="table-page-size">
-            Rows:
+            {t("table.rows")}
           </label>
           <select
             id="table-page-size"
@@ -88,7 +89,7 @@ export default function Table<T>(props: TableProps<T>) {
         when={props.items.length > 0}
         fallback={
           <div class="table-empty">
-            {props.emptyMessage ?? "No records found."}
+            {props.emptyMessage ?? t("table.empty")}
           </div>
         }
       >

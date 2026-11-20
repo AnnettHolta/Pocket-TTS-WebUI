@@ -16,7 +16,7 @@
 
 .history-cell-time {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -31,11 +31,11 @@
 .history-cell-model {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: var(--space-0-5);
 }
 
 .history-model-name {
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: var(--color-text);
   white-space: nowrap;
@@ -45,7 +45,7 @@
 
 .history-model-sub {
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   color: var(--color-text-muted);
   white-space: nowrap;
 }
@@ -53,12 +53,12 @@
 .history-cell-files {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: var(--space-0-5);
 }
 
 .history-file-line {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   color: var(--color-text-code);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -73,6 +73,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.3rem;
+  gap: var(--space-1);
   white-space: nowrap;
 }

@@ -1,5 +1,6 @@
 import { For } from "solid-js";
 import { TbOutlineStack2, TbOutlineWorld } from "solid-icons/tb";
+import { t } from "../i18n";
 import type { PrecisionMode } from "../lib/historyDb";
 import "./InferenceSettings.css";
 
@@ -20,11 +21,11 @@ export interface InferenceSettingsProps {
 }
 
 const TEMP_PRESETS = [
-  { label: "Precise", value: 0.1 },
-  { label: "Natural", value: 0.3 },
-  { label: "Expressive", value: 0.7 },
-  { label: "Dynamic", value: 0.95 },
-] as const;
+  { key: "settings.precise" as const, value: 0.1 },
+  { key: "settings.natural" as const, value: 0.35 },
+  { key: "settings.expressive" as const, value: 0.65 },
+  { key: "settings.dynamic" as const, value: 0.95 },
+];
 
 export default function InferenceSettings(props: InferenceSettingsProps) {
   return (
@@ -32,7 +33,7 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
       <div class="field">
         <label class="icon-label" for="language">
           <TbOutlineWorld size={13} />
-          <span>Language Model</span>
+          <span>{t("settings.languageModel")}</span>
         </label>
         <select
           id="language"
@@ -48,7 +49,7 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
       <div class="field">
         <label class="icon-label" for="precision">
           <TbOutlineStack2 size={13} />
-          <span>Quantization</span>
+          <span>{t("settings.quantization")}</span>
         </label>
         <select
           id="precision"
@@ -57,16 +58,16 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
             props.onSelectPrecision(e.currentTarget.value as PrecisionMode)
           }
         >
-          <option value="mixed">Mixed (INT8 main + FP32 decoder)</option>
-          <option value="int8">Full INT8 (Compact)</option>
+          <option value="mixed">{t("settings.mixedOption")}</option>
+          <option value="int8">{t("settings.int8Option")}</option>
         </select>
       </div>
 
       <div class="field">
         <div class="field-header">
           <div>
-            <label for="temperature">Temperature</label>{" "}
-            <span class="hint">Variation</span>
+            <label for="temperature">{t("settings.temperature")}</label>{" "}
+            <span class="hint">{t("settings.variation")}</span>
           </div>
           <span class="pill-value">{props.temperature.toFixed(2)}</span>
         </div>
@@ -91,7 +92,7 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
                 }`}
                 onClick={() => props.onChangeTemperature(preset.value)}
               >
-                {preset.label}
+                {t(preset.key)}
               </button>
             )}
           </For>
