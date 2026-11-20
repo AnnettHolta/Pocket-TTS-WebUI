@@ -1,6 +1,7 @@
 import { createMemo, createSignal, Match, onSettled, Switch } from "solid-js";
 import type { LanguageOption } from "./components/InferenceSettings";
 import AppLayout, { type PageTab } from "./layout/AppLayout";
+import { decodeAndResampleTo24kMono } from "./lib/audioUtils";
 import {
   addHistoryItem,
   clearHistory,
@@ -10,9 +11,10 @@ import {
   type PrecisionMode,
 } from "./lib/historyDb";
 import { probeHardwareInfo, type HardwareInfo } from "./lib/hardwareInfo";
-import { createPreviewWavBlob } from "./lib/previewWav";
+import { getTtsClient } from "./lib/ttsClient";
 import HistoryPage from "./pages/HistoryPage";
 import StudioPage from "./pages/StudioPage";
+import type { QueueSnapshot } from "./workers/ttsTypes";
 
 const PLACEHOLDER_LANGUAGES: LanguageOption[] = [
   { id: "english_2026-10", label: "English (2026-10)", cached: false },
@@ -42,6 +44,10 @@ export default function App() {
   const [voiceTranscript, setVoiceTranscript] = createSignal<string>("");
   const [voiceSha256, setVoiceSha256] = createSignal<string | null>(null);
   const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
+  const [inferenceStage, setInferenceStage] = createSignal<string | null>(null);
+  const [inferenceProgress, setInferenceProgress] = createSignal<number>(0);
+  const [queueSnapshot, setQueueSnapshot] = createSignal<QueueSnapshot | null>(null);
+  const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [audioUrl, setAudioUrl] = createSignal<string | null>(null);
   const [hardwareInfo, setHardwareInfo] = createSignal<HardwareInfo | null>(null);
   const [history, setHistory] = createSignal<GenerationHistoryItem[]>([]);
@@ -57,6 +63,12 @@ export default function App() {
     void listHistory()
       .then((items) => setHistory(items))
       .catch((err) => console.error("IndexedDB load error:", err));
+
+    const client = getTtsClient();
+    const unsub = client.subscribeQueue((snapshot) => {
+      setQueueSnapshot(snapshot);
+    });
+    return () => unsub();
   });
 
   const currentLanguage = createMemo(() =>
@@ -88,38 +100,67 @@ export default function App() {
     if (!promptText || isGenerating()) return;
 
     setIsGenerating(true);
+    setErrorMessage(null);
+    setInferenceStage("Queued");
+    setInferenceProgress(0);
+
     const now = Date.now();
     const lang = currentLanguage();
     const file = voiceFile();
     const generatedFileName = buildGeneratedFilename(selectedLang(), now);
 
-    const entry: GenerationHistoryItem = {
-      id: crypto.randomUUID(),
-      createdAt: now,
-      text: promptText,
-      languageId: selectedLang(),
-      languageLabel: lang?.label ?? selectedLang(),
-      precision: precision(),
-      temperature: temperature(),
-      voiceFileName: file ? file.name : null,
-      voiceFilePath: voicePath().trim() || null,
-      voiceTranscript: voiceTranscript().trim() || null,
-      voiceSha256: voiceSha256(),
-      generatedFileName,
-    };
-
     try {
+      let refAudio24k: Float32Array | undefined;
+      if (file) {
+        setInferenceStage("Resampling reference audio");
+        refAudio24k = await decodeAndResampleTo24kMono(file);
+      }
+
+      const client = getTtsClient();
+      const result = await client.synthesize(
+        {
+          text: promptText,
+          languageId: selectedLang(),
+          precision: precision(),
+          temperature: temperature(),
+          refAudio24k,
+          refTranscript: voiceTranscript().trim() || undefined,
+        },
+        (stage, progress) => {
+          setInferenceStage(stage);
+          setInferenceProgress(progress);
+        }
+      );
+
       const prevUrl = audioUrl();
       if (prevUrl) URL.revokeObjectURL(prevUrl);
-      const previewBlob = createPreviewWavBlob(2.4);
-      setAudioUrl(URL.createObjectURL(previewBlob));
+      const wavBlob = new Blob([result.wavBuffer], { type: "audio/wav" });
+      setAudioUrl(URL.createObjectURL(wavBlob));
+
+      const entry: GenerationHistoryItem = {
+        id: crypto.randomUUID(),
+        createdAt: now,
+        text: promptText,
+        languageId: selectedLang(),
+        languageLabel: lang?.label ?? selectedLang(),
+        precision: precision(),
+        temperature: temperature(),
+        voiceFileName: file ? file.name : null,
+        voiceFilePath: voicePath().trim() || null,
+        voiceTranscript: voiceTranscript().trim() || null,
+        voiceSha256: voiceSha256(),
+        generatedFileName,
+      };
 
       await addHistoryItem(entry);
       setHistory((prev) => [entry, ...prev]);
     } catch (err) {
-      console.error("Failed to save history:", err);
+      console.error("Inference error:", err);
+      setErrorMessage(err instanceof Error ? err.message : String(err));
     } finally {
       setIsGenerating(false);
+      setInferenceStage(null);
+      setInferenceProgress(0);
     }
   };
 
@@ -171,6 +212,11 @@ export default function App() {
             text={text()}
             onTextInput={setText}
             isGenerating={isGenerating()}
+            inferenceStage={inferenceStage()}
+            inferenceProgress={inferenceProgress()}
+            queueLength={queueSnapshot()?.queueLength ?? 0}
+            errorMessage={errorMessage()}
+            onDismissError={() => setErrorMessage(null)}
             audioUrl={audioUrl()}
             onGenerate={handleGenerate}
           />

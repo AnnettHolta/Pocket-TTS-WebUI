@@ -29,11 +29,26 @@ export interface StudioPageProps {
   text: string;
   onTextInput: (value: string) => void;
   isGenerating: boolean;
+  inferenceStage: string | null;
+  inferenceProgress: number;
+  queueLength: number;
+  errorMessage: string | null;
+  onDismissError: () => void;
   audioUrl: string | null;
   onGenerate: (e: Event) => void;
 }
 
 export default function StudioPage(props: StudioPageProps) {
+  const buttonLabel = () => {
+    if (!props.isGenerating) return "Generate Speech";
+    const pct = Math.round(props.inferenceProgress * 100);
+    const stageText = props.inferenceStage
+      ? `${props.inferenceStage} (${pct}%)`
+      : "Synthesizing...";
+    return props.queueLength > 1
+      ? `${stageText} • Queue ${props.queueLength}`
+      : stageText;
+  };
   return (
     <section class="card">
       <form onSubmit={(e) => props.onGenerate(e)}>
@@ -70,13 +85,28 @@ export default function StudioPage(props: StudioPageProps) {
                   disabled={props.isGenerating || !props.text.trim()}
                 >
                   <TbOutlineWand size={15} />
-                  <span>
-                    {props.isGenerating ? "Synthesizing..." : "Generate Speech"}
-                  </span>
-                  <kbd class="studio-kbd">⌘↵</kbd>
+                  <span>{buttonLabel()}</span>
+                  <Show when={!props.isGenerating}>
+                    <kbd class="studio-kbd">⌘↵</kbd>
+                  </Show>
                 </button>
               }
             />
+
+            <Show when={props.errorMessage}>
+              {(err) => (
+                <div class="studio-error" role="alert">
+                  <span>{err()}</span>
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm"
+                    onClick={() => props.onDismissError()}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </Show>
           </div>
         </div>
       </form>
