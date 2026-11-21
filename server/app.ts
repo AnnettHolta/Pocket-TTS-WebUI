@@ -1,14 +1,13 @@
 import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
-import path from "node:path";
 import { Readable } from "node:stream";
 import { Hono } from "hono";
 import {
   ensureLanguageModelDownloaded,
+  getVerifiedModelFile,
   listLanguages,
-  MODELS_PUBLIC_DIR,
   type PrecisionMode,
 } from "./hf.ts";
+import { modelBasePath, MODEL_REVISION } from "./modelSource.ts";
 
 export const app = new Hono();
 
@@ -36,7 +35,7 @@ app.post("/api/languages/:id/prepare", async (c) => {
     );
     return c.json({
       ok: true,
-      baseUrl: `/models/pocket-tts/${languageId}`,
+      baseUrl: modelBasePath(languageId),
       ...result,
     });
   } catch (err) {
@@ -48,27 +47,25 @@ app.post("/api/languages/:id/prepare", async (c) => {
 });
 
 // Serve locally cached models from public/models/pocket-tts/*
-app.get("/models/pocket-tts/:lang/:file", async (c) => {
+app.get("/models/pocket-tts/:revision/:lang/:file", async (c) => {
+  if (c.req.param("revision") !== MODEL_REVISION) return c.text("Not found", 404);
   const lang = c.req.param("lang");
   const file = c.req.param("file");
   if (!/^[\w-]+$/.test(lang) || !/^[\w.-]+$/.test(file) || file.startsWith(".")) {
     return c.text("Forbidden", 403);
   }
 
-  const filePath = path.join(MODELS_PUBLIC_DIR, lang, file);
-  const info = await stat(filePath).catch(() => null);
-  if (file.endsWith(".part") || !info?.isFile() || info.size === 0) {
-    return c.text("Not found", 404);
-  }
+  const cached = await getVerifiedModelFile(lang, file);
+  if (!cached) return c.text("Not found", 404);
 
-  const data = Readable.toWeb(createReadStream(filePath)) as ReadableStream<Uint8Array>;
+  const data = Readable.toWeb(createReadStream(cached.filePath)) as ReadableStream<Uint8Array>;
   const contentType = file.endsWith(".json")
     ? "application/json; charset=utf-8"
     : "application/octet-stream";
 
   return c.body(data, 200, {
     "Content-Type": contentType,
-    "Content-Length": String(info.size),
+    "Content-Length": String(cached.size),
     "Cache-Control": "public, max-age=31536000, immutable",
   });
 });

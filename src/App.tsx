@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, Match, onCleanup, onSettled, Show, Switch, untrack } from "solid-js";
+import { DEFAULT_MODEL_LANGUAGE } from "../server/modelSource";
 import type { LanguageOption } from "./components/InferenceSettings";
 import AppLayout, { type PageTab } from "./layout/AppLayout";
 import { decodeAndResampleTo24kMono } from "./lib/audioUtils";
@@ -22,16 +23,33 @@ import { t } from "./i18n";
 import HistoryPage from "./pages/HistoryPage";
 import StudioPage, { type StudioOutput } from "./pages/StudioPage";
 import VoicesPage from "./pages/VoicesPage";
-import type { QueueSnapshot } from "./workers/ttsTypes";
+import type { QueueSnapshot, SpeechPart, SpeechStage } from "./workers/ttsTypes";
 
 const PLACEHOLDER_LANGUAGES: LanguageOption[] = [
-  { id: "english_2026-10", label: "English (2026-10)", cached: false },
+  { id: DEFAULT_MODEL_LANGUAGE, label: "English (2026-10)", cached: false },
   { id: "french_24l", label: "French (24L)", cached: false },
   { id: "german_24l", label: "German (24L)", cached: false },
   { id: "italian_24l", label: "Italian (24L)", cached: false },
   { id: "portuguese_24l", label: "Portuguese (24L)", cached: false },
   { id: "spanish_24l", label: "Spanish (24L)", cached: false },
 ];
+const MODEL_LANGUAGE_STORAGE_KEY = "pocket-tts-model-language";
+
+function initialModelLanguage(): string {
+  try {
+    const saved = localStorage.getItem(MODEL_LANGUAGE_STORAGE_KEY);
+    if (saved && PLACEHOLDER_LANGUAGES.some((language) => language.id === saved)) return saved;
+  } catch (err) {
+    console.warn("Failed to read the saved speech model language:", err);
+  }
+  return DEFAULT_MODEL_LANGUAGE;
+}
+
+interface InferenceStage {
+  key: SpeechStage | "queued" | "preparingModel" | "resamplingReference" | "cpuRetry" | "compressing";
+  part?: SpeechPart;
+  cpu?: boolean;
+}
 
 function buildGeneratedFilename(languageId: string, ts: number): string {
   const iso = new Date(ts).toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -46,7 +64,7 @@ function releaseOutput(output: StudioOutput): void {
 export default function App() {
   const [activePage, setActivePage] = createSignal<PageTab>("studio");
   const [languages, setLanguages] = createSignal<LanguageOption[]>(PLACEHOLDER_LANGUAGES);
-  const [selectedLang, setSelectedLang] = createSignal<string>(PLACEHOLDER_LANGUAGES[0].id);
+  const [selectedLang, setSelectedLang] = createSignal(initialModelLanguage());
   const [precision, setPrecision] = createSignal<PrecisionMode>("mixed");
   const [temperature, setTemperature] = createSignal<number>(0.35);
   const [text, setText] = createSignal<string>(
@@ -59,7 +77,14 @@ export default function App() {
   const [voiceNeedsAttachment, setVoiceNeedsAttachment] = createSignal(false);
   const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
   const [usingCpuFallback, setUsingCpuFallback] = createSignal(false);
-  const [inferenceStage, setInferenceStage] = createSignal<string | null>(null);
+  const [inferenceStage, setInferenceStage] = createSignal<InferenceStage | null>(null);
+  const inferenceStageText = createMemo(() => {
+    const stage = inferenceStage();
+    if (!stage) return null;
+    const label = t(`studio.${stage.key}`);
+    const part = stage.part ? ` (${stage.part.current}/${stage.part.total})` : "";
+    return `${stage.cpu ? "CPU (WASM) · " : ""}${label}${part}`;
+  });
   const [inferenceProgress, setInferenceProgress] = createSignal<number>(0);
   const [queueSnapshot, setQueueSnapshot] = createSignal<QueueSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
@@ -105,7 +130,7 @@ export default function App() {
         if (data?.languages && data.languages.length > 0) {
           setLanguages(data.languages);
           if (!data.languages.some((l) => l.id === selectedLang())) {
-            setSelectedLang(data.languages[0].id);
+            setSelectedLang(data.languages.find((lang) => lang.id === DEFAULT_MODEL_LANGUAGE)?.id ?? data.languages[0].id);
           }
         }
       })
@@ -126,6 +151,15 @@ export default function App() {
   const currentLanguage = createMemo(() =>
     languages().find((lang) => lang.id === selectedLang())
   );
+
+  const handleSelectLanguage = (id: string) => {
+    setSelectedLang(id);
+    try {
+      localStorage.setItem(MODEL_LANGUAGE_STORAGE_KEY, id);
+    } catch (err) {
+      console.warn("Failed to save the speech model language:", err);
+    }
+  };
 
   const handleApplyVoice = (payload: {
     file: File | null;
@@ -168,7 +202,7 @@ export default function App() {
     const { signal } = controller;
     setIsGenerating(true);
     setErrorMessage(null);
-    setInferenceStage("Queued");
+    setInferenceStage({ key: "queued" });
     setInferenceProgress(0);
 
     const now = Date.now();
@@ -183,7 +217,7 @@ export default function App() {
     const generatedFileName = buildGeneratedFilename(languageId, now);
 
     try {
-      setInferenceStage("Preparing model on server");
+      setInferenceStage({ key: "preparingModel" });
       setInferenceProgress(0.05);
       const prepRes = await fetch(
         `/api/languages/${encodeURIComponent(languageId)}/prepare`,
@@ -207,7 +241,7 @@ export default function App() {
 
       let refAudio24k: Float32Array | undefined;
       if (file) {
-        setInferenceStage("Resampling reference audio");
+        setInferenceStage({ key: "resamplingReference" });
         refAudio24k = await decodeAndResampleTo24kMono(file);
       }
       signal.throwIfAborted();
@@ -221,19 +255,19 @@ export default function App() {
           temperature: submittedTemperature,
           refAudio24k,
         },
-        (stage, progress) => {
-          setInferenceStage(usingCpuFallback() ? `CPU (WASM) · ${stage}` : stage);
+        (key, progress, part) => {
+          setInferenceStage({ key, part, cpu: usingCpuFallback() });
           setInferenceProgress(progress);
         },
         signal,
         () => {
           setUsingCpuFallback(true);
-          setInferenceStage(t("studio.cpuRetry"));
+          setInferenceStage({ key: "cpuRetry" });
           setInferenceProgress(0);
         },
       );
 
-      setInferenceStage(t("studio.compressing"));
+      setInferenceStage({ key: "compressing" });
       setInferenceProgress(0.99);
       const wavBlob = new Blob([result.wavBuffer], { type: "audio/wav" });
       const audio = await encodeOggOpus(wavBlob, { signal });
@@ -334,7 +368,7 @@ export default function App() {
           <StudioPage
             languages={languages()}
             selectedLang={selectedLang()}
-            onSelectLang={setSelectedLang}
+            onSelectLang={handleSelectLanguage}
             precision={precision()}
             onSelectPrecision={setPrecision}
             temperature={temperature()}
@@ -350,7 +384,7 @@ export default function App() {
             text={text()}
             onTextInput={setText}
             isGenerating={isGenerating()}
-            inferenceStage={inferenceStage()}
+            inferenceStage={inferenceStageText()}
             inferenceProgress={inferenceProgress()}
             queueLength={queueSnapshot()?.queueLength ?? 0}
             errorMessage={errorMessage()}

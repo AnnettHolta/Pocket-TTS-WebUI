@@ -1,4 +1,4 @@
-import { createSignal, For, onCleanup, Show, untrack } from "solid-js";
+import { createMemo, createSignal, For, onCleanup, Show, untrack } from "solid-js";
 import {
   TbOutlineCheck,
   TbOutlineChevronDown,
@@ -15,7 +15,7 @@ import LibrarySearch from "../components/LibrarySearch";
 import Modal from "../components/Modal";
 import StoredAudio from "../components/StoredAudio";
 import TablePagination from "../components/table/TablePagination";
-import { t } from "../i18n";
+import { locale, t } from "../i18n";
 import createLibraryPreview from "../lib/createLibraryPreview";
 import type { StoredList } from "../lib/createStoredList";
 import type { GenerationHistoryItem } from "../lib/historyDb";
@@ -30,12 +30,12 @@ export interface HistoryPageProps {
 }
 
 const PAGE_SIZES = [10, 25, 50, 100];
-const dateFormat = new Intl.DateTimeFormat(undefined, {
+const dateFormat = createMemo(() => new Intl.DateTimeFormat(locale(), {
   month: "short",
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-});
+}));
 
 function HistoryRow(props: {
   item: GenerationHistoryItem;
@@ -75,7 +75,7 @@ function HistoryRow(props: {
         <h3>{props.item.text}</h3>
         <p>
           <time datetime={new Date(props.item.createdAt).toISOString()}>
-            {dateFormat.format(props.item.createdAt)}
+            {dateFormat().format(props.item.createdAt)}
           </time>
           {" · "}{props.item.languageLabel}
         </p>
@@ -229,7 +229,7 @@ export default function HistoryPage(props: HistoryPageProps) {
             <div class="history-detail">
               <p class="history-detail-text">{item().text}</p>
               <dl>
-                <dt>{t("history.colTime")}</dt><dd>{dateFormat.format(item().createdAt)}</dd>
+                <dt>{t("history.colTime")}</dt><dd>{dateFormat().format(item().createdAt)}</dd>
                 <dt>{t("history.colModel")}</dt><dd>{item().languageLabel} · {item().precision} · {t("settings.temperature")} {item().temperature.toFixed(2)}</dd>
                 <dt>{t("history.colFiles")}</dt>
                 <dd>{item().generatedFileName}<Show when={item().voiceFilePath || item().voiceFileName}>{(name) => <div>{name()}</div>}</Show></dd>

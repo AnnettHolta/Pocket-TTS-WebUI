@@ -1,11 +1,13 @@
 ﻿import type {
   QueueSnapshot,
+  SpeechPart,
+  SpeechStage,
   SynthesizePayload,
   WorkerInboundMessage,
   WorkerOutboundMessage,
 } from "../workers/ttsTypes";
 
-type ProgressHandler = (stage: string, progress: number) => void;
+type ProgressHandler = (stage: SpeechStage, progress: number, part?: SpeechPart) => void;
 type QueueHandler = (snapshot: QueueSnapshot) => void;
 type SynthesisOptions = Omit<SynthesizePayload, "jobId" | "clientId" | "forceCpu">;
 type SynthesisResult = Extract<WorkerOutboundMessage, { type: "result" }>;
@@ -180,7 +182,7 @@ class TtsSharedClient {
         receive: (message) => {
           if (message.type === "progress") {
             resetIdleTimer(message.webGpuOperation);
-            onProgress(message.stage, message.progress);
+            onProgress(message.stage, message.progress, message.part);
           } else if (message.type === "result") {
             cleanup();
             resolve(message);

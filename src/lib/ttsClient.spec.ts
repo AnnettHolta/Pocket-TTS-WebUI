@@ -119,7 +119,7 @@ it("switches to a fresh worker when a GPU operation stops responding", async () 
   gpuWorker.onmessage?.({
     data: {
       type: "progress", jobId: job.jobId, clientId: job.clientId,
-      stage: "Encoding reference voice", progress: 0.7, webGpuOperation: true,
+      stage: "encodingReference", progress: 0.7, webGpuOperation: true,
     },
   });
 

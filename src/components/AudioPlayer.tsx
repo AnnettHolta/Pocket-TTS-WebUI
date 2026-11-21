@@ -152,7 +152,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
           class="audio-play-btn"
           disabled={!isReady()}
           onClick={togglePlay}
-          aria-label={isPlaying() ? "Pause" : "Play"}
+          aria-label={t(isPlaying() ? "player.pause" : "player.play")}
         >
           {isPlaying() ? <TbFillPlayerPause size={13} /> : <TbFillPlayerPlay size={13} />}
         </button>
@@ -178,7 +178,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
             type="button"
             class="audio-square-btn"
             onClick={cycleSpeed}
-            aria-label="Playback speed"
+            aria-label={t("player.speed")}
           >
             {formatSpeedLabel(SPEED_OPTIONS[speedIndex()])}
           </button>
@@ -188,7 +188,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
               type="button"
               class={`audio-square-btn ${volumeOpen() ? "active" : ""}`}
               onClick={() => setVolumeOpen((v) => !v)}
-              aria-label={`Toggle volume slider, volume ${Math.round(volume() * 100)}%`}
+              aria-label={t("player.toggleVolume", { volume: Math.round(volume() * 100) })}
               aria-expanded={volumeOpen() ? "true" : "false"}
             >
               {volume() > 0 ? <TbOutlineVolume size={15} /> : <TbOutlineVolumeOff size={15} />}
@@ -203,7 +203,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
                   max="1"
                   step="0.05"
                   value={volume()}
-                  aria-label="Volume"
+                  aria-label={t("player.volume")}
                   onInput={(e) => handleVolume(parseFloat(e.currentTarget.value))}
                 />
               </div>

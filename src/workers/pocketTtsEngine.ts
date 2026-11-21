@@ -1,6 +1,7 @@
 import * as ort from "onnxruntime-web/webgpu";
+import { modelBasePath, MODEL_RESOLVE_BASE } from "../../server/modelSource";
 import type { PrecisionMode } from "../lib/historyDb";
-import type { TtsProvider } from "./ttsTypes";
+import type { SpeechPart, SpeechStage, TtsProvider } from "./ttsTypes";
 import {
   encodeWav,
   parseNpyFloat32,
@@ -44,7 +45,6 @@ interface LoadedModelPack {
   mimiEncoder: ort.InferenceSession | null;
 }
 
-const HF_BASE = "https://huggingface.co/stephvax/pocket-tts-onnx/resolve/main/onnx";
 let cachedPack: LoadedModelPack | null = null;
 let ortInitialized = false;
 
@@ -59,7 +59,7 @@ function ensureOrtEnv(): void {
 }
 
 async function resolveModelBaseUrl(languageId: string): Promise<string> {
-  const localBase = `/models/pocket-tts/${languageId}`;
+  const localBase = modelBasePath(languageId);
   try {
     const res = await fetch(`${localBase}/bundle.json`);
     const contentType = res.headers.get("content-type") ?? "";
@@ -69,7 +69,7 @@ async function resolveModelBaseUrl(languageId: string): Promise<string> {
   } catch {
     // Fall back to Hugging Face CDN when local Hono cache is absent.
   }
-  return `${HF_BASE}/${languageId}`;
+  return `${MODEL_RESOLVE_BASE}/${languageId}`;
 }
 
 async function fetchBuffer(url: string): Promise<ArrayBuffer> {
@@ -227,10 +227,10 @@ async function loadModelPack(
   const gpu = provider === "webgpu";
   if (cached?.key === key) {
     if (needsEncoder && !cached.mimiEncoder) {
-      onProgress("Loading voice encoder", 0.56);
+      onProgress("loadingVoiceEncoder", 0.56);
       const baseUrl = await resolveModelBaseUrl(languageId);
       const encoder = await fetchBuffer(`${baseUrl}/mimi_encoder.onnx`);
-      onProgress("Initializing voice encoder", 0.58, gpu);
+      onProgress("initializingVoiceEncoder", 0.58, gpu);
       cached.mimiEncoder = await createSession(encoder, provider);
     }
     return cached;
@@ -238,7 +238,7 @@ async function loadModelPack(
 
   if (cached) {
     cachedPack = null;
-    onProgress("Releasing previous model", 0.07, cached.provider === "webgpu");
+    onProgress("releasingModel", 0.07, cached.provider === "webgpu");
     await releaseSessions([
       cached.textConditioner, cached.flowLmMain, cached.flowLmFlow, cached.mimiDecoder,
       ...(cached.mimiEncoder ? [cached.mimiEncoder] : []),
@@ -248,7 +248,7 @@ async function loadModelPack(
   ensureOrtEnv();
   const baseUrl = await resolveModelBaseUrl(languageId);
 
-  onProgress("Loading bundle & tokenizer", 0.08);
+  onProgress("loadingBundle", 0.08);
   const bundleRes = await fetch(`${baseUrl}/bundle.json`);
   if (!bundleRes.ok) {
     throw new Error(`Failed to load bundle.json for ${languageId}`);
@@ -268,7 +268,7 @@ async function loadModelPack(
   const decoderFile =
     precision === "int8" ? "mimi_decoder_int8.onnx" : "mimi_decoder.onnx";
 
-  onProgress("Loading ONNX graphs", 0.22);
+  onProgress("loadingGraphs", 0.22);
   const [condBuf, mainBuf, flowBuf, decBuf] = await Promise.all([
     fetchBuffer(`${baseUrl}/text_conditioner.onnx`),
     fetchBuffer(`${baseUrl}/flow_lm_main_int8.onnx`),
@@ -277,7 +277,7 @@ async function loadModelPack(
   ]);
 
   const sessions: ort.InferenceSession[] = [];
-  const init = async (stage: string, progress: number, buffer: ArrayBuffer) => {
+    const init = async (stage: SpeechStage, progress: number, buffer: ArrayBuffer) => {
     onProgress(stage, progress, gpu);
     const session = await createSession(buffer, provider);
     sessions.push(session);
@@ -285,15 +285,15 @@ async function loadModelPack(
   };
   try {
     // Initialize sessions sequentially for WebGPU.
-    const textConditioner = await init("Initializing text conditioner", 0.38, condBuf);
-    const flowLmMain = await init("Initializing flow LM backbone", 0.44, mainBuf);
-    const flowLmFlow = await init("Initializing flow net", 0.5, flowBuf);
-    const mimiDecoder = await init("Initializing Mimi decoder", 0.55, decBuf);
+    const textConditioner = await init("initializingTextConditioner", 0.38, condBuf);
+    const flowLmMain = await init("initializingBackbone", 0.44, mainBuf);
+    const flowLmFlow = await init("initializingFlow", 0.5, flowBuf);
+    const mimiDecoder = await init("initializingDecoder", 0.55, decBuf);
     let mimiEncoder: ort.InferenceSession | null = null;
     if (needsEncoder) {
-      onProgress("Loading voice encoder", 0.56);
+      onProgress("loadingVoiceEncoder", 0.56);
       const encoder = await fetchBuffer(`${baseUrl}/mimi_encoder.onnx`);
-      mimiEncoder = await init("Initializing voice encoder", 0.58, encoder);
+      mimiEncoder = await init("initializingVoiceEncoder", 0.58, encoder);
     }
 
     return cachedPack = {
@@ -314,7 +314,7 @@ export interface RunSynthesisInput {
   temperature: number;
   refAudio24k?: Float32Array;
   forceCpu?: boolean;
-  onProgress: (stage: string, progress: number, webGpuOperation?: boolean) => void;
+  onProgress: (stage: SpeechStage, progress: number, webGpuOperation?: boolean, part?: SpeechPart) => void;
 }
 
 export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
@@ -332,7 +332,7 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
     input.onProgress
   );
 
-  input.onProgress("Tokenizing text", 0.62);
+  input.onProgress("tokenizingText", 0.62);
   let normalizedText = input.text.trim();
   if (pack.bundle.replace_characters) {
     for (const [from, to] of Object.entries(pack.bundle.replace_characters)) {
@@ -348,7 +348,7 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
   // Optional reference voice encoding
   let voicePrompt: Float32Array = pack.bosBeforeVoice;
   if (input.refAudio24k && pack.mimiEncoder) {
-    input.onProgress("Encoding reference voice", 0.64, gpu);
+    input.onProgress("encodingReference", 0.64, gpu);
     const audioTensor = new ort.Tensor("float32", input.refAudio24k, [
       1,
       1,
@@ -372,8 +372,8 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
   for (const [index, chunk] of chunks.entries()) {
     const onProgress: RunSynthesisInput["onProgress"] = (stage, progress, webGpuOperation) => {
       const chunkProgress = progress - 0.66;
-      const label = chunks.length > 1 ? `${stage} (${index + 1}/${chunks.length})` : stage;
-      input.onProgress(label, 0.66 + (0.31 * index + chunkProgress) / chunks.length, webGpuOperation);
+      const part = chunks.length > 1 ? { current: index + 1, total: chunks.length } : undefined;
+      input.onProgress(stage, 0.66 + (0.31 * index + chunkProgress) / chunks.length, webGpuOperation, part);
     };
     const pcm = await synthesizeChunk(pack, chunk, voicePrompt, input.temperature, onProgress);
     if (!pcm) {
@@ -392,7 +392,7 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
     offset += chunk.length;
   }
 
-  input.onProgress("Encoding WAV", 0.98);
+  input.onProgress("encodingWav", 0.98);
   const sampleRate = pack.bundle.sample_rate || 24000;
   return { wavBuffer: encodeWav(pcm, sampleRate), durationSec: totalSamples / sampleRate, provider };
 }
@@ -408,7 +408,7 @@ async function synthesizeChunk(
   const gpu = provider === "webgpu";
   const tokenIds = chunk.tokens;
   const condDim = pack.bundle.conditioning_dim || 1024;
-  onProgress("Conditioning text", 0.66, gpu);
+  onProgress("conditioningText", 0.66, gpu);
   const tokenTensor = new ort.Tensor(
     "int64",
     BigInt64Array.from(tokenIds, (id) => BigInt(id)),
@@ -447,7 +447,7 @@ async function synthesizeChunk(
       [seqInputName]: emptySeq,
       [textInputName]: textTensorOrCombined(textEmb, voiceTensor),
     };
-    onProgress("Preparing voice conditioning", 0.71, gpu);
+    onProgress("preparingVoice", 0.71, gpu);
     const initOut = await runSession(provider, pack.flowLmMain, condFeeds);
     mapStateOutputsToInputs(
       pack.flowLmMain.inputNames,
@@ -479,7 +479,7 @@ async function synthesizeChunk(
 
   for (let step = 0; step < maxFrames; step++) {
     if (step % 4 === 0) {
-      onProgress("Generating audio frames", 0.72 + (step / maxFrames) * 0.18, gpu);
+      onProgress("generatingFrames", 0.72 + (step / maxFrames) * 0.18, gpu);
     }
 
     const stepFeeds: Record<string, ort.Tensor> = {
@@ -553,7 +553,7 @@ async function synthesizeChunk(
   if (!eosHit) return null;
 
   // Decode generated latents with Mimi decoder using inputMetadata-typed state
-  onProgress("Decoding waveform", 0.92, gpu);
+  onProgress("decodingWaveform", 0.92, gpu);
   const decMetas = getInputMetas(pack.mimiDecoder);
   const decStateFeeds: Record<string, ort.Tensor> = {};
   let decLatentName = pack.mimiDecoder.inputNames[0];
@@ -570,7 +570,7 @@ async function synthesizeChunk(
   const pcmChunks: Float32Array[] = [];
   for (const frame of generatedFrames) {
     if (pcmChunks.length % 8 === 0) {
-      onProgress("Decoding waveform", 0.92 + (pcmChunks.length / generatedFrames.length) * 0.05, gpu);
+      onProgress("decodingWaveform", 0.92 + (pcmChunks.length / generatedFrames.length) * 0.05, gpu);
     }
     const decFeeds: Record<string, ort.Tensor> = {
       ...decStateFeeds,

@@ -92,13 +92,14 @@ async function processQueue(): Promise<void> {
         temperature,
         refAudio24k,
         forceCpu,
-        onProgress: (stage, progress, webGpuOperation) => {
+        onProgress: (stage, progress, webGpuOperation, part) => {
           if (next.cancelled) throw new Error("Generation cancelled.");
           sendToPort(next.port, {
             type: "progress",
             jobId,
             clientId,
             stage,
+            part,
             progress,
             webGpuOperation,
           });

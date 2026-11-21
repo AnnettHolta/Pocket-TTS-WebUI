@@ -2,6 +2,18 @@ import type { PrecisionMode } from "../lib/historyDb";
 
 export type TtsProvider = "webgpu" | "wasm";
 
+export type SpeechStage =
+  | "loadingVoiceEncoder" | "initializingVoiceEncoder" | "releasingModel"
+  | "loadingBundle" | "loadingGraphs" | "initializingTextConditioner"
+  | "initializingBackbone" | "initializingFlow" | "initializingDecoder"
+  | "tokenizingText" | "encodingReference" | "encodingWav" | "conditioningText"
+  | "preparingVoice" | "generatingFrames" | "decodingWaveform";
+
+export interface SpeechPart {
+  current: number;
+  total: number;
+}
+
 export interface SynthesizePayload {
   jobId: string;
   clientId: string;
@@ -31,7 +43,8 @@ export type WorkerOutboundMessage =
       type: "progress";
       jobId: string;
       clientId: string;
-      stage: string;
+      stage: SpeechStage;
+      part?: SpeechPart;
       progress: number;
       webGpuOperation?: boolean;
     }

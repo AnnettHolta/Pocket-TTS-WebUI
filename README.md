@@ -22,7 +22,7 @@ Audio compression runs in the browser with `@ffmpeg/core@0.12.10`, which `pnpm i
 ## Generate your first clip
 
 1. In **Studio**, keep the default English model and mixed precision.
-2. Leave the sample text in place and click **Generate Speech**. The first run downloads model weights from Hugging Face and can take a few minutes. The local server reuses those files on subsequent runs.
+2. Leave the sample text in place and click **Generate Speech**. The first run downloads the pinned model files from Hugging Face and can take a few minutes. The local server verifies cached files before first use and repairs corrupt entries on demand.
 3. Play the result or use the format selector beside **Download** to export it as **Ogg, Opus, MP3, WAV, or FLAC**.
 
 Studio plays the model's original WAV output. Downloads default to Ogg. The Ogg and Opus options use the same Ogg Opus audio with `.ogg` and `.opus` extensions, respectively. Open **History** to play or download an earlier clip as Ogg Opus, or reuse its settings in Studio.

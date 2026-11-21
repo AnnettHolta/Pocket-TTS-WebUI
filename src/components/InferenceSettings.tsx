@@ -40,8 +40,8 @@ export default function InferenceSettings(props: InferenceSettingsProps) {
           value={props.selectedLang}
           onChange={(e) => props.onSelectLang(e.currentTarget.value)}
         >
-          <For each={props.languages}>
-            {(lang) => <option value={lang.id}>{lang.label}</option>}
+          <For each={props.languages} keyed={(lang) => lang.id}>
+            {(lang) => <option value={lang().id} selected={lang().id === props.selectedLang}>{lang().label}</option>}
           </For>
         </select>
       </div>
