@@ -1,5 +1,6 @@
 import { Show } from "solid-js";
 import { TbOutlineWand } from "solid-icons/tb";
+import AudioDownload from "../components/AudioDownload";
 import AudioPlayer from "../components/AudioPlayer";
 import InferenceRefVoice from "../components/InferenceRefVoice";
 import InferenceSettings, { type LanguageOption } from "../components/InferenceSettings";
@@ -37,9 +38,16 @@ export interface StudioPageProps {
   queueLength: number;
   errorMessage: string | null;
   onDismissError: () => void;
-  output: { url: string; name: string } | null;
+  output: StudioOutput | null;
   onGenerate: (e: Event) => void;
   onCancel: () => void;
+}
+
+export interface StudioOutput {
+  url: string;
+  oggUrl: string;
+  wav: Blob;
+  name: string;
 }
 
 export default function StudioPage(props: StudioPageProps) {
@@ -121,14 +129,10 @@ export default function StudioPage(props: StudioPageProps) {
         </div>
       </form>
 
-      <Show when={props.output}>
+      <Show when={props.output} keyed>
         {(output) => (
           <div class="studio-output">
-            <AudioPlayer
-              src={output().url}
-              downloadName={output().name}
-              downloadLabel={t("player.downloadOgg")}
-            />
+            <AudioPlayer src={output.url} downloadControl={<AudioDownload {...output} />} />
           </div>
         )}
       </Show>

@@ -94,6 +94,8 @@ export const uk: Dictionary = {
     dismiss: "Закрити",
   },
   player: {
+    download: "Завантажити",
+    downloadFormat: "Формат аудіо",
     recentOutput: "Останній результат",
     downloadWav: "Завантажити WAV",
     downloadOgg: "Завантажити Ogg",

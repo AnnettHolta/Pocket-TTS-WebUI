@@ -94,6 +94,8 @@ export const pl: Dictionary = {
     dismiss: "Zamknij",
   },
   player: {
+    download: "Pobierz",
+    downloadFormat: "Format dźwięku",
     recentOutput: "Ostatni wynik",
     downloadWav: "Pobierz WAV",
     downloadOgg: "Pobierz Ogg",

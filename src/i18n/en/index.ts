@@ -92,6 +92,8 @@ export const en = {
     dismiss: "Dismiss",
   },
   player: {
+    download: "Download",
+    downloadFormat: "Audio format",
     recentOutput: "Recent Output",
     downloadWav: "Download WAV",
     downloadOgg: "Download Ogg",

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { chromium } from "playwright";
 import { createServer, preview } from "vite";
 
@@ -333,6 +334,23 @@ try {
   if (await generationError.isVisible()) assert.fail(await generationError.innerText());
   await verifyOggOpus(output);
   const historyAudio = await audioBytes(output);
+  const format = page.getByRole("combobox", { name: "Audio format" });
+  assert.equal(await format.inputValue(), "ogg");
+  await format.selectOption("opus");
+  assert.deepEqual(await audioBytes(page.locator('.studio-output a[download$=".opus"]')), historyAudio);
+  await format.selectOption("wav");
+  const wav = Buffer.from(await audioBytes(page.getByRole("link", { name: "Download WAV" })));
+  assert.match(wav.toString("ascii", 0, 12), /^RIFF....WAVE$/s);
+  for (const [extension, signature] of [["mp3", "ID3"], ["flac", "fLaC"]]) {
+    await format.selectOption(extension);
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      page.getByRole("button", { name: "Download", exact: true }).click(),
+    ]);
+    assert.ok(download.suggestedFilename().endsWith(`.${extension}`));
+    const bytes = await readFile(await download.path());
+    assert.equal(bytes.toString("ascii", 0, signature.length), signature);
+  }
   await desktopNav.getByRole("button", { name: "History (1)" }).waitFor();
 
   await page.reload();

@@ -94,6 +94,8 @@ export const zh: Dictionary = {
     dismiss: "关闭",
   },
   player: {
+    download: "下载",
+    downloadFormat: "音频格式",
     recentOutput: "最近输出",
     downloadWav: "下载 WAV",
     downloadOgg: "下载 Ogg",

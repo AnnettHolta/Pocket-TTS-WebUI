@@ -1,4 +1,5 @@
 import { createEffect, createSignal, For, Show, untrack } from "solid-js";
+import type { JSX } from "@solidjs/web";
 import {
   TbFillPlayerPause,
   TbFillPlayerPlay,
@@ -14,6 +15,7 @@ export interface AudioPlayerProps {
   src: string;
   downloadName?: string;
   downloadLabel?: string;
+  downloadControl?: JSX.Element;
   heading?: string;
 }
 
@@ -129,6 +131,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
     <section class="audio-player">
       <div class="audio-player-header">
         <span class="audio-player-title">{props.heading ?? t("player.recentOutput")}</span>
+        {props.downloadControl}
         <Show when={props.downloadName}>
           {(name) => (
             <a

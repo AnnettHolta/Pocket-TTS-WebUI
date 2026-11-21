@@ -11,6 +11,29 @@
   gap: var(--space-2);
 }
 
+.audio-player-header:has(.audio-download-actions) {
+  flex-wrap: wrap;
+}
+
+.audio-download-actions {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-1-5);
+}
+
+.audio-download-actions select {
+  width: auto;
+  min-width: 5rem;
+  padding: var(--pad-control-sm);
+  font-size: var(--text-xs);
+}
+
+.audio-download-error {
+  margin: var(--space-1) 0 0;
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+}
+
 .audio-player-title {
   font-size: var(--text-xs);
   font-weight: 500;

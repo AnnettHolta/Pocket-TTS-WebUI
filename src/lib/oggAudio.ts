@@ -1,5 +1,13 @@
 import { decodeAudio } from "./audioUtils";
 
+export type AudioEncodingFormat = "ogg" | "mp3" | "flac";
+
+const mediaTypes: Record<AudioEncodingFormat, string> = {
+  ogg: "audio/ogg",
+  mp3: "audio/mpeg",
+  flac: "audio/flac",
+};
+
 export async function prepareReferenceAudio(input: Blob): Promise<Blob> {
   const oggHeaderSize = 27;
   const maxSegments = 255;
@@ -17,9 +25,19 @@ export async function prepareReferenceAudio(input: Blob): Promise<Blob> {
   return encodeOggOpus(input, { bitrateKbps: 96 });
 }
 
-export async function encodeOggOpus(
+interface EncodeAudioOptions {
+  bitrateKbps?: number;
+  signal?: AbortSignal;
+}
+
+export function encodeOggOpus(input: Blob, options?: EncodeAudioOptions): Promise<Blob> {
+  return encodeAudio(input, "ogg", options);
+}
+
+export async function encodeAudio(
   input: Blob,
-  { bitrateKbps = 32, signal }: { bitrateKbps?: number; signal?: AbortSignal } = {},
+  format: AudioEncodingFormat,
+  { bitrateKbps = 32, signal }: EncodeAudioOptions = {},
 ): Promise<Blob> {
   const bytes = await input.arrayBuffer();
   signal?.throwIfAborted();
@@ -46,12 +64,12 @@ export async function encodeOggOpus(
           return;
         }
         clearTimeout(timer);
-        resolve(new Blob([data.bytes], { type: "audio/ogg" }));
+        resolve(new Blob([data.bytes], { type: mediaTypes[format] }));
       };
       worker.onerror = () => fail("Could not start the audio compressor.");
       worker.onmessageerror = () => fail("Could not read the compressed audio.");
       try {
-        worker.postMessage({ bytes, bitrateKbps }, [bytes]);
+        worker.postMessage({ bytes, format, bitrateKbps }, [bytes]);
       } catch (error) {
         clearTimeout(timer);
         reject(error);

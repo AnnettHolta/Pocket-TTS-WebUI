@@ -15,7 +15,7 @@ select {
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
-select:focus {
+select:focus-visible {
   border-color: var(--color-border-focus);
   background: var(--color-input-focus);
 }

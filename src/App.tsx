@@ -20,7 +20,7 @@ import { encodeOggOpus } from "./lib/oggAudio";
 import { getTtsClient } from "./lib/ttsClient";
 import { t } from "./i18n";
 import HistoryPage from "./pages/HistoryPage";
-import StudioPage from "./pages/StudioPage";
+import StudioPage, { type StudioOutput } from "./pages/StudioPage";
 import VoicesPage from "./pages/VoicesPage";
 import type { QueueSnapshot } from "./workers/ttsTypes";
 
@@ -36,6 +36,11 @@ const PLACEHOLDER_LANGUAGES: LanguageOption[] = [
 function buildGeneratedFilename(languageId: string, ts: number): string {
   const iso = new Date(ts).toISOString().replace(/[:.]/g, "-").slice(0, 19);
   return `pocket-tts-${languageId}-${iso}.ogg`;
+}
+
+function releaseOutput(output: StudioOutput): void {
+  URL.revokeObjectURL(output.url);
+  URL.revokeObjectURL(output.oggUrl);
 }
 
 export default function App() {
@@ -58,7 +63,7 @@ export default function App() {
   const [inferenceProgress, setInferenceProgress] = createSignal<number>(0);
   const [queueSnapshot, setQueueSnapshot] = createSignal<QueueSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
-  const [output, setOutput] = createSignal<{ url: string; name: string } | null>(null);
+  const [output, setOutput] = createSignal<StudioOutput | null>(null);
   const [hardwareInfo, setHardwareInfo] = createSignal<HardwareInfo | null>(null);
   let generation: AbortController | null = null;
   let historyReuse = 0;
@@ -82,7 +87,7 @@ export default function App() {
   onCleanup(() => {
     generation?.abort();
     const result = output();
-    if (result) URL.revokeObjectURL(result.url);
+    if (result) releaseOutput(result);
   });
 
   const webGpuAvailable = createMemo(
@@ -234,8 +239,13 @@ export default function App() {
       const audio = await encodeOggOpus(wavBlob, { signal });
       signal.throwIfAborted();
       const previous = output();
-      setOutput({ url: URL.createObjectURL(audio), name: generatedFileName });
-      if (previous) URL.revokeObjectURL(previous.url);
+      setOutput({
+        wav: wavBlob,
+        url: URL.createObjectURL(wavBlob),
+        oggUrl: URL.createObjectURL(audio),
+        name: generatedFileName,
+      });
+      if (previous) releaseOutput(previous);
 
       const entry: GenerationHistoryItem = {
         id: crypto.randomUUID(),
