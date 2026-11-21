@@ -1,0 +1,10 @@
+services:
+  webui:
+    build: .
+    ports:
+      - "127.0.0.1:${POCKET_TTS_PORT:-3001}:3001"
+    volumes:
+      - model-cache:/app/public/models/pocket-tts
+
+volumes:
+  model-cache:

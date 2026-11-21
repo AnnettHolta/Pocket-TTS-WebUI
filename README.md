@@ -54,6 +54,23 @@ The server uses `http://127.0.0.1:3001` by default. Keep `dist/assets/` with the
 
 For a hosted demo or downloadable build, include the applicable license notices and provide access to the corresponding source and build scripts for the exact FFmpeg WASM binary you distribute. [FFmpeg build documentation](https://ffmpegwasm.netlify.app/docs/contribution/core/) · [GNU GPL distribution guidance](https://www.gnu.org/licenses/gpl-faq.en.html#DistributeWithSource)
 
+## Docker
+
+Start the production build with Docker Compose.
+
+```sh
+docker compose up --build
+```
+
+Open `http://127.0.0.1:3001`. Set `POCKET_TTS_PORT` in your environment or a local `.env` file to use a different host port. The `model-cache` volume keeps downloaded models across container restarts. History and saved voices live in the browser for that address.
+
+To use Docker directly, build and run the image with a named model volume.
+
+```sh
+docker build -t pocket-tts-webui .
+docker run --rm -p 127.0.0.1:3001:3001 -v pocket-tts-models:/app/public/models/pocket-tts pocket-tts-webui
+```
+
 ## Licenses
 
 - The original PocketTTS WebUI source uses Apache License 2.0. [License text](LICENSE)
