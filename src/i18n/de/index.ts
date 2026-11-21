@@ -37,8 +37,7 @@ export const de: Dictionary = {
     indexedDb: "IndexedDB ({{count}})",
   },
   footer: {
-    engine: "PocketTTS ONNX Engine",
-    zeroCloud: "Keine Cloud-Abhängigkeiten",
+    developer: "AnnettHolta",
     modelWeights: "Modellgewichte",
   },
   settings: {

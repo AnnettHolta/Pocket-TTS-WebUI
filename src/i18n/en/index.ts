@@ -35,8 +35,7 @@ export const en = {
     indexedDb: "IndexedDB ({{count}})",
   },
   footer: {
-    engine: "PocketTTS ONNX Engine",
-    zeroCloud: "Zero Cloud Dependencies",
+    developer: "AnnettHolta",
     modelWeights: "Model weights",
   },
   settings: {

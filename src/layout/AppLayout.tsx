@@ -120,11 +120,19 @@ export default function AppLayout(props: AppLayoutProps) {
         <div class="app-content">{props.children}</div>
 
         <footer class="app-footer">
-          <span>
-            {t("footer.engine")} • {props.webGpuAvailable ? "WebGPU" : "WASM"}
-          </span>
+          <a href="https://github.com/annettholta" target="_blank" rel="noreferrer">
+            {t("footer.developer")}
+          </a>
           <div class="app-footer-links">
-            <span>{t("footer.zeroCloud")}</span>
+            <a
+              class="icon-label"
+              href="https://github.com/annettholta/pocket-tts-webui"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <span>GitHub</span>
+              <TbOutlineExternalLink size={11} />
+            </a>
             <span>•</span>
             <a
               class="icon-label"

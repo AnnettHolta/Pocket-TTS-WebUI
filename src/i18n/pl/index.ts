@@ -37,8 +37,7 @@ export const pl: Dictionary = {
     indexedDb: "IndexedDB ({{count}})",
   },
   footer: {
-    engine: "Silnik PocketTTS ONNX",
-    zeroCloud: "Zero zależności chmurowych",
+    developer: "AnnettHolta",
     modelWeights: "Wagi modelu",
   },
   settings: {

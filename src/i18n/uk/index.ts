@@ -37,8 +37,7 @@ export const uk: Dictionary = {
     indexedDb: "IndexedDB ({{count}})",
   },
   footer: {
-    engine: "Рушій PocketTTS ONNX",
-    zeroCloud: "Без хмарних залежностей",
+    developer: "AnnettHolta",
     modelWeights: "Ваги моделі",
   },
   settings: {

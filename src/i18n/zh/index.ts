@@ -37,8 +37,7 @@ export const zh: Dictionary = {
     indexedDb: "IndexedDB ({{count}})",
   },
   footer: {
-    engine: "PocketTTS ONNX 引擎",
-    zeroCloud: "零云端依赖",
+    developer: "AnnettHolta",
     modelWeights: "模型权重",
   },
   settings: {
