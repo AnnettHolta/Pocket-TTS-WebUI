@@ -54,6 +54,32 @@ The server uses `http://127.0.0.1:3001` by default. Keep `dist/assets/` with the
 
 For a hosted demo or downloadable build, include the applicable license notices and provide access to the corresponding source and build scripts for the exact FFmpeg WASM binary you distribute. [FFmpeg build documentation](https://ffmpegwasm.netlify.app/docs/contribution/core/) · [GNU GPL distribution guidance](https://www.gnu.org/licenses/gpl-faq.en.html#DistributeWithSource)
 
+## Generation API
+
+`POST /api/v1/generate` runs on the machine hosting PocketTTS and returns a WAV file. Open the [Scalar API reference](http://127.0.0.1:3001/api/v1/docs) to browse and try the endpoint, or use the [OpenAPI JSON](http://127.0.0.1:3001/api/v1/openapi.json) with other tools. With `pnpm dev`, use the same paths on the URL Vite prints. The Scalar page loads its UI bundle from jsDelivr.
+
+Agents with an HTTP client can follow [`/llms.txt`](http://127.0.0.1:3001/llms.txt) for request examples and instructions for uploading reference audio and saving the generated WAV.
+
+```sh
+curl --fail-with-body http://127.0.0.1:3001/api/v1/generate \
+  -H 'Content-Type: application/json' \
+  --data '{"text":"Hello from PocketTTS."}' \
+  --output speech.wav
+```
+
+To use a custom voice, send the reference as an Ogg audio file, including `.opus` files in the Ogg container. References can be up to 8 MiB and 20 seconds. The server decodes the clip with the bundled FFmpeg WASM and uses it for that generation.
+
+```sh
+curl --fail-with-body http://127.0.0.1:3001/api/v1/generate \
+  --form-string 'text=Hello from PocketTTS.' \
+  --form 'reference=@sample.opus' \
+  --output speech.wav
+```
+
+The API defaults to English, INT8, and the `auto` backend. Auto tries native WebGPU when available and falls back to CPU if WebGPU fails. Set `backend` to `cpu` to force CPU inference or `webgpu` to require the WebGPU provider. The `X-Inference-Backend` response header reports the selected provider. The first request for a model may take longer while the server populates its model cache.
+
+The API runs one generation at a time and returns HTTP 429 if it is busy. The default localhost listener is intended for local clients. Browser-saved voices are available in the WebUI, and API requests supply their own references.
+
 ## Docker
 
 Start the production build with Docker Compose.

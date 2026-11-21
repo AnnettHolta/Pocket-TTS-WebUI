@@ -1,14 +1,15 @@
 import { getRequestListener } from "@hono/node-server";
 import { defineConfig, type Connect, type Plugin } from "vite";
 import solid from "@solidjs/vite-plugin";
-import { app } from "./server/app.ts";
+import { endpoints } from "./server/endpoints/index.ts";
 import { resolveLanguagesOnStartup } from "./server/hf.ts";
 
 function modelCache(): Plugin {
   const install = (server: { middlewares: Connect.Server }) => {
-    const handleRequest = getRequestListener(app.fetch, { overrideGlobalObjects: false });
+    const handleRequest = getRequestListener(endpoints.fetch, { overrideGlobalObjects: false });
     server.middlewares.use((req, res, next) => {
-      if (req.url?.startsWith("/api/") || req.url?.startsWith("/models/pocket-tts/")) {
+      const path = req.url?.split("?", 1)[0];
+      if (path === "/llms.txt" || path?.startsWith("/api/") || path?.startsWith("/models/pocket-tts/")) {
         return handleRequest(req, res);
       }
       next();

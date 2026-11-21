@@ -1,0 +1,33 @@
+# PocketTTS WebUI
+
+> Generate speech over HTTP and save the response as a WAV file. Optionally upload an Ogg Opus recording to use as the reference voice.
+
+Use the origin that served this file for API calls. The production server defaults to `http://127.0.0.1:3001`. During development, use the origin printed by Vite.
+
+## Generate speech
+
+Send `POST /api/v1/generate` with an `application/json` body. The required `text` field accepts up to 2,000 characters. Optional fields are `language` (defaults to `english_2026-10`), `precision` (`int8` or `mixed`, defaults to `int8`), `temperature` (0 to 1, defaults to 0.3), and `backend` (`auto`, `webgpu`, or `cpu`, defaults to `auto`).
+
+```sh
+curl --fail http://127.0.0.1:3001/api/v1/generate \
+  -H 'Content-Type: application/json' \
+  --data '{"text":"Hello from PocketTTS."}' \
+  --output speech.wav
+```
+
+For a custom voice, send `multipart/form-data` with `text` and a binary file field named `reference`. Use an Ogg audio file such as an Ogg Opus `.opus` clip, at most 8 MiB and 20 seconds long. Use a recording you have permission to use. The reference applies to that request. The browser's saved voice library is available through the WebUI.
+
+```sh
+curl --fail http://127.0.0.1:3001/api/v1/generate \
+  --form-string 'text=Hello from PocketTTS.' \
+  --form 'reference=@sample.opus' \
+  --output speech.wav
+```
+
+Save a successful response (`200 audio/wav`) as a binary file. `X-Inference-Backend` reports the selected provider. Allow time for model downloads on first use. If the server returns `429`, wait for the `Retry-After` interval before retrying.
+
+## API references
+
+- [OpenAPI JSON](/api/v1/openapi.json)
+- [Interactive Scalar reference](/api/v1/docs)
+- [Available language models](/api/languages)

@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { app } from "./app.ts";
+import { endpoints } from "./endpoints/index.ts";
 import { resolveLanguagesOnStartup } from "./hf.ts";
 
 const server = new Hono();
-server.route("/", app);
+server.route("/", endpoints);
 
 const production = process.argv.includes("--production") || process.env.NODE_ENV === "production";
 if (production && existsSync("dist")) {

@@ -410,11 +410,13 @@ try {
     "We stopped near a little café, where I bought a cup of coffee and sat by the window.",
     "Later, I met a friend at the library and we talked about the books we had read that week.",
     "By the time I got home, the sun was setting and all the lights were coming on along the street.",
+    "I made dinner, opened the window for some fresh air, and listened to the rain for a while before going to bed.",
   ].join(" "));
   await generate.click();
   await output.or(generationError).waitFor({ timeout: 240_000 });
   if (await generationError.isVisible()) assert.fail(await generationError.innerText());
-  assert.ok(await verifyOggOpus(output) > 16, "Long speech should exceed the old 16-second cap.");
+  const longDuration = await verifyOggOpus(output);
+  assert.ok(longDuration > 16, `Long speech should exceed the old 16-second cap. Got ${longDuration}s.`);
 
   await verifyLibraryPagination(browser, origin, historyAudio, voiceAudio);
   assert.deepEqual(pageErrors, []);

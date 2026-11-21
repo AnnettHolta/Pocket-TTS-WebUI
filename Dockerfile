@@ -17,8 +17,9 @@ FROM base AS runtime
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=3001
 COPY --from=production-dependencies /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
-COPY package.json LICENSE README.md ./
+COPY package.json LICENSE README.md llms.txt ./
 COPY server/ ./server/
+COPY src/workers/pocketTtsCore.ts src/workers/pocketTtsHelpers.ts ./src/workers/
 RUN mkdir -p public/models/pocket-tts && chown -R node:node public
 USER node
 EXPOSE 3001
