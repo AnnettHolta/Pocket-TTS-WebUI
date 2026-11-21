@@ -152,6 +152,12 @@
   flex: 1;
 }
 
+@media (max-width: 760px) {
+  .app-content {
+    padding-inline: var(--space-1);
+  }
+}
+
 .app-footer {
   margin-top: auto;
   padding-top: var(--space-3);
