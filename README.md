@@ -2,9 +2,13 @@
 
 Generate speech in your browser with PocketTTS. Pick a language and a voice, type a short passage, and download the result as an Ogg file.
 
+![PocketTTS WebUI preview](assets/app-preview.png)
+
 ## Get started
 
-Install Node.js 24 and pnpm. From this project folder, run:
+Install pnpm and a supported Node.js version. The minimum is **Node.js 22.22.2** on the 22.x line. Node.js **24.15.0 or newer on the 24.x line** is recommended, and Node.js 26 or later is also supported by the dependency requirements.
+
+From this project folder, run:
 
 ```sh
 pnpm install
@@ -13,27 +17,44 @@ pnpm dev
 
 Open the localhost address printed in the terminal in a recent desktop version of Chrome, Edge, or Firefox. Leave the terminal running while you use the app. On Windows, use `pnpm.cmd` if PowerShell blocks `pnpm`.
 
+Audio compression runs in the browser with `@ffmpeg/core@0.12.10`, which `pnpm install` installs and Vite bundles as WebAssembly. A system FFmpeg installation is unnecessary.
+
 ## Generate your first clip
 
 1. In **Studio**, keep the default English model and mixed precision.
 2. Leave the sample text in place and click **Generate Speech**. The first run downloads model weights from Hugging Face and can take a few minutes. The local server reuses those files on subsequent runs.
 3. Play the result or click **Download Ogg**. Open **History** to play or download an earlier result, or reuse its settings in Studio.
 
-Keep passages short. If generation reaches the model's output limit, split the passage and generate the sections separately. If the speech worker stops, retry generation. The app can run on CPU through WASM when GPU acceleration is unavailable.
+The app splits long passages automatically at sentence or word boundaries and joins the result into one clip. If a section fails to finish, try rephrasing it. The app can run on CPU through WASM when GPU acceleration is unavailable.
 
 ## Use a reference voice
 
 In **Voices**, add a short, clear recording you have permission to use. WAV and FLAC are good starting formats. Add transcript notes to identify what the speaker said, then save it. Select **Use in Studio** to generate with that recording. You can also add a recording directly from Studio.
 
-The browser saves new reference voices and generated speech as Ogg Opus. Previously saved Ogg Vorbis voices remain playable. Transcript notes are for your library. When you reuse an old generation whose reference is missing, reattach the original recording or clear the reference to generate with the default voice.
+The browser saves new reference voices and generated speech as Ogg Opus. Uploaded Ogg Opus files are saved directly after a browser decode check. Previously saved Ogg Vorbis voices remain playable. Transcript notes are for your library. When you reuse an old generation whose reference is missing, reattach the original recording or clear the reference to generate with the default voice.
+
+If voice encoding runs out of memory, try a clear excerpt of about **5 seconds**. In a French CPU profile, a 20-second reference used substantially more memory than a 5-second sample. Memory use varies by model, precision, and browser.
 
 History and saved voices belong to this browser profile and site address. Clearing site data removes them. Download anything you want to keep. Older history entries can still restore their settings, and their audio is available only if it was saved.
 
 The app processes your text and recordings on your device. Internet access is needed to fetch models and runtime assets on first use. Audio encoding runs locally.
+
+## Production build
+
+After installing the dependencies, run:
+
+```sh
+pnpm build
+pnpm start
+```
+
+The server uses `http://127.0.0.1:3001` by default. Keep `dist/assets/` with the rest of the build so the browser can load the FFmpeg worker and WASM binary.
+
+For a hosted demo or downloadable build, include the applicable license notices and provide access to the corresponding source and build scripts for the exact FFmpeg WASM binary you distribute. [FFmpeg build documentation](https://ffmpegwasm.netlify.app/docs/contribution/core/) · [GNU GPL distribution guidance](https://www.gnu.org/licenses/gpl-faq.en.html#DistributeWithSource)
 
 ## Licenses
 
 - The original PocketTTS WebUI source uses Apache License 2.0. [License text](LICENSE)
 - Kyutai’s Pocket TTS source code uses MIT. [Kyutai’s license](https://github.com/kyutai-labs/pocket-tts/blob/main/LICENSE)
 - The Pocket TTS model weights are © Kyutai and use CC BY 4.0. The app downloads stephvax’s ONNX conversions, which carry the same license. [Kyutai model card](https://huggingface.co/kyutai/pocket-tts) · [ONNX export attribution](https://huggingface.co/stephvax/pocket-tts-onnx#licence-and-attribution) · [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
-- The bundled FFmpeg WebAssembly core uses GPL-2.0-or-later. Distributions that include the core must meet the GPL’s notice and corresponding-source requirements. [Package license](https://github.com/ffmpegwasm/ffmpeg.wasm/blob/main/packages/core/package.json) · [GNU GPL distribution guidance](https://www.gnu.org/licenses/gpl-faq.en.html#DistributeWithSource)
+- The bundled FFmpeg WebAssembly core uses GPL-2.0-or-later. [Package license](https://github.com/ffmpegwasm/ffmpeg.wasm/blob/main/packages/core/package.json)
