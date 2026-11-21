@@ -109,6 +109,7 @@ export const de: Dictionary = {
     generate: "Sprache generieren",
     synthesizing: "Synthetisiere...",
     compressing: "Audio wird komprimiert",
+    compressionFailed: "Die Ogg-Komprimierung ist fehlgeschlagen. Du kannst die WAV-Datei weiterhin im Studio abspielen oder herunterladen. Der Clip wurde nicht im Verlauf gespeichert.",
     queueSuffix: "Warteschlange {{count}}",
     dismiss: "Schließen",
   },

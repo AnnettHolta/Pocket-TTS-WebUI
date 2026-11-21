@@ -58,7 +58,7 @@ function buildGeneratedFilename(languageId: string, ts: number): string {
 
 function releaseOutput(output: StudioOutput): void {
   URL.revokeObjectURL(output.url);
-  URL.revokeObjectURL(output.oggUrl);
+  if (output.oggUrl) URL.revokeObjectURL(output.oggUrl);
 }
 
 export default function App() {
@@ -267,19 +267,27 @@ export default function App() {
         },
       );
 
+      signal.throwIfAborted();
+      const wavBlob = new Blob([result.wavBuffer], { type: "audio/wav" });
+      const wavOutput = { wav: wavBlob, url: URL.createObjectURL(wavBlob), name: generatedFileName };
+      const previous = output();
+      setOutput(wavOutput);
+      if (previous) releaseOutput(previous);
+
       setInferenceStage({ key: "compressing" });
       setInferenceProgress(0.99);
-      const wavBlob = new Blob([result.wavBuffer], { type: "audio/wav" });
-      const audio = await encodeOggOpus(wavBlob, { signal });
-      signal.throwIfAborted();
-      const previous = output();
-      setOutput({
-        wav: wavBlob,
-        url: URL.createObjectURL(wavBlob),
-        oggUrl: URL.createObjectURL(audio),
-        name: generatedFileName,
-      });
-      if (previous) releaseOutput(previous);
+      let audio: Blob;
+      try {
+        audio = await encodeOggOpus(wavBlob, { signal });
+        signal.throwIfAborted();
+        setOutput({ ...wavOutput, oggUrl: URL.createObjectURL(audio) });
+      } catch (error) {
+        if (!signal.aborted) {
+          console.warn("Could not compress generated audio to Ogg:", error);
+          setErrorMessage(t("studio.compressionFailed"));
+        }
+        return;
+      }
 
       const entry: GenerationHistoryItem = {
         id: crypto.randomUUID(),

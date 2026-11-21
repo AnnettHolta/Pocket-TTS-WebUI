@@ -109,6 +109,7 @@ export const zh: Dictionary = {
     generate: "生成语音",
     synthesizing: "正在合成...",
     compressing: "正在压缩音频",
+    compressionFailed: "Ogg 压缩失败。你仍可在工作室播放或下载 WAV 文件。此音频未保存到历史记录。",
     queueSuffix: "队列 {{count}}",
     dismiss: "关闭",
   },

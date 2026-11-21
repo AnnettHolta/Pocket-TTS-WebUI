@@ -109,6 +109,7 @@ export const pl: Dictionary = {
     generate: "Generuj mowę",
     synthesizing: "Synteza...",
     compressing: "Kompresowanie dźwięku",
+    compressionFailed: "Kompresja Ogg nie powiodła się. Nadal możesz odtworzyć lub pobrać plik WAV w Studio. Nagranie nie zostało zapisane w historii.",
     queueSuffix: "Kolejka {{count}}",
     dismiss: "Zamknij",
   },

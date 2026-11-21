@@ -418,6 +418,25 @@ try {
   const longDuration = await verifyOggOpus(output);
   assert.ok(longDuration > 16, `Long speech should exceed the old 16-second cap. Got ${longDuration}s.`);
 
+  // A failed compression job must leave the newly generated WAV available.
+  const compressor = /\/ogg\.worker(?:-[\w-]+\.js|\.ts)(?:\?.*)?$/;
+  const blockCompression = (route) => route.abort();
+  await page.route(compressor, blockCompression);
+  try {
+    await page.getByLabel("Text to Synthesize").fill("Keep this WAV if compression fails.");
+    await generate.click();
+    await generationError.filter({ hasText: "Ogg compression failed" }).waitFor({ timeout: 120_000 });
+    const wavDownload = page.getByRole("link", { name: "Download WAV" });
+    const fallbackWav = Buffer.from(await audioBytes(wavDownload));
+    assert.match(fallbackWav.toString("ascii", 0, 12), /^RIFF....WAVE$/s);
+    assert.equal(await format.inputValue(), "wav");
+    assert.ok(await format.locator('option[value="ogg"]').isDisabled());
+    await page.locator(".studio-output").getByRole("button", { name: "Play", exact: true }).click();
+    await page.locator(".studio-output").getByRole("button", { name: "Pause", exact: true }).waitFor();
+  } finally {
+    await page.unroute(compressor, blockCompression);
+  }
+
   await verifyLibraryPagination(browser, origin, historyAudio, voiceAudio);
   assert.deepEqual(pageErrors, []);
   console.log("Browser smoke passed for generation, voice reuse, library pagination, search, and audio migration.");

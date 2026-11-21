@@ -109,6 +109,7 @@ export const uk: Dictionary = {
     generate: "Згенерувати мовлення",
     synthesizing: "Синтез...",
     compressing: "Стиснення аудіо",
+    compressionFailed: "Не вдалося стиснути аудіо у формат Ogg. Ви можете відтворити або завантажити WAV у студії. Запис не збережено в історії.",
     queueSuffix: "Черга {{count}}",
     dismiss: "Закрити",
   },

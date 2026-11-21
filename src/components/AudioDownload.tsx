@@ -6,8 +6,9 @@ import { encodeAudio } from "../lib/oggAudio";
 const formats = ["ogg", "opus", "mp3", "wav", "flac"] as const;
 type DownloadFormat = typeof formats[number];
 
-export default function AudioDownload(props: { wav: Blob; url: string; oggUrl: string; name: string }) {
-  const [format, setFormat] = createSignal<DownloadFormat>("ogg");
+export default function AudioDownload(props: { wav: Blob; url: string; oggUrl?: string; name: string }) {
+  const [selectedFormat, setFormat] = createSignal<DownloadFormat>();
+  const format = () => selectedFormat() ?? (props.oggUrl ? "ogg" : "wav");
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal("");
   let active: AbortController | undefined;
@@ -77,7 +78,13 @@ export default function AudioDownload(props: { wav: Blob; url: string; oggUrl: s
             setError("");
           }}
         >
-          <For each={formats}>{(option) => <option value={option}>{option.toUpperCase()}</option>}</For>
+          <For each={formats}>
+            {(option) => (
+              <option value={option} disabled={!props.oggUrl && (option === "ogg" || option === "opus")}>
+                {option.toUpperCase()}
+              </option>
+            )}
+          </For>
         </select>
       </div>
       <Show when={error()}>{(message) => <p class="audio-download-error" role="alert">{message()}</p>}</Show>

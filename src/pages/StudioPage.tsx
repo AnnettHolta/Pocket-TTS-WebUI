@@ -45,7 +45,7 @@ export interface StudioPageProps {
 
 export interface StudioOutput {
   url: string;
-  oggUrl: string;
+  oggUrl?: string;
   wav: Blob;
   name: string;
 }
@@ -129,11 +129,20 @@ export default function StudioPage(props: StudioPageProps) {
         </div>
       </form>
 
-      <Show when={props.output} keyed>
+      <Show when={props.output}>
         {(output) => (
-          <div class="studio-output">
-            <AudioPlayer src={output.url} downloadControl={<AudioDownload {...output} />} />
-          </div>
+          <Show when={output().url} keyed>
+            {(url) => (
+              <div class="studio-output">
+                <AudioPlayer
+                  src={url}
+                  downloadControl={
+                    <AudioDownload url={url} wav={output().wav} oggUrl={output().oggUrl} name={output().name} />
+                  }
+                />
+              </div>
+            )}
+          </Show>
         )}
       </Show>
     </section>

@@ -107,6 +107,7 @@ export const en = {
     generate: "Generate Speech",
     synthesizing: "Synthesizing...",
     compressing: "Compressing audio",
+    compressionFailed: "Ogg compression failed. You can still play or download the WAV in Studio. This clip was not saved to History.",
     queueSuffix: "Queue {{count}}",
     dismiss: "Dismiss",
   },
