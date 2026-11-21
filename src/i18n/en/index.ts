@@ -37,6 +37,7 @@ export const en = {
   footer: {
     engine: "PocketTTS ONNX Engine",
     zeroCloud: "Zero Cloud Dependencies",
+    modelWeights: "Model weights",
   },
   settings: {
     languageModel: "Language Model",

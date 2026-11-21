@@ -29,4 +29,11 @@ The browser saves new reference voices and generated speech as Ogg Opus. Previou
 
 History and saved voices belong to this browser profile and site address. Clearing site data removes them. Download anything you want to keep. Older history entries can still restore their settings, and their audio is available only if it was saved.
 
-The app processes your text and recordings on your device. Internet access is needed to fetch models and runtime assets on first use. Audio encoding runs locally using the bundled [FFmpeg WebAssembly core](https://github.com/ffmpegwasm/ffmpeg.wasm), which is licensed under GPL-2.0-or-later.
+The app processes your text and recordings on your device. Internet access is needed to fetch models and runtime assets on first use. Audio encoding runs locally.
+
+## Licenses
+
+- The original PocketTTS WebUI source uses Apache License 2.0. [License text](LICENSE)
+- Kyutai’s Pocket TTS source code uses MIT. [Kyutai’s license](https://github.com/kyutai-labs/pocket-tts/blob/main/LICENSE)
+- The Pocket TTS model weights are © Kyutai and use CC BY 4.0. The app downloads stephvax’s ONNX conversions, which carry the same license. [Kyutai model card](https://huggingface.co/kyutai/pocket-tts) · [ONNX export attribution](https://huggingface.co/stephvax/pocket-tts-onnx#licence-and-attribution) · [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- The bundled FFmpeg WebAssembly core uses GPL-2.0-or-later. Distributions that include the core must meet the GPL’s notice and corresponding-source requirements. [Package license](https://github.com/ffmpegwasm/ffmpeg.wasm/blob/main/packages/core/package.json) · [GNU GPL distribution guidance](https://www.gnu.org/licenses/gpl-faq.en.html#DistributeWithSource)

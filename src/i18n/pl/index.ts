@@ -39,6 +39,7 @@ export const pl: Dictionary = {
   footer: {
     engine: "Silnik PocketTTS ONNX",
     zeroCloud: "Zero zależności chmurowych",
+    modelWeights: "Wagi modelu",
   },
   settings: {
     languageModel: "Model językowy",

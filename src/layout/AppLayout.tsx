@@ -136,7 +136,7 @@ export default function AppLayout(props: AppLayoutProps) {
               <TbOutlineExternalLink size={11} />
             </a>
             <span>•</span>
-            <span class="mono">CC-BY-4.0</span>
+            <span>{t("footer.modelWeights")} · <span class="mono">CC BY 4.0</span></span>
           </div>
         </footer>
       </main>

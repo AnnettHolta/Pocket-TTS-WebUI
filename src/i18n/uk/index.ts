@@ -39,6 +39,7 @@ export const uk: Dictionary = {
   footer: {
     engine: "Рушій PocketTTS ONNX",
     zeroCloud: "Без хмарних залежностей",
+    modelWeights: "Ваги моделі",
   },
   settings: {
     languageModel: "Мовна модель",

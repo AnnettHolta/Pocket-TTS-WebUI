@@ -39,6 +39,7 @@ export const de: Dictionary = {
   footer: {
     engine: "PocketTTS ONNX Engine",
     zeroCloud: "Keine Cloud-Abhängigkeiten",
+    modelWeights: "Modellgewichte",
   },
   settings: {
     languageModel: "Sprachmodell",

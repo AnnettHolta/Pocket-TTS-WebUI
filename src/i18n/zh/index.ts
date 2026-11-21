@@ -39,6 +39,7 @@ export const zh: Dictionary = {
   footer: {
     engine: "PocketTTS ONNX 引擎",
     zeroCloud: "零云端依赖",
+    modelWeights: "模型权重",
   },
   settings: {
     languageModel: "语言模型",
