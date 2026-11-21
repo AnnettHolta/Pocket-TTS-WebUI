@@ -8,7 +8,7 @@ export interface BadgeProps {
   tone?: BadgeTone;
   dot?: boolean;
   onClick?: () => void;
-  title?: string;
+  ariaLabel?: string;
   children: JSX.Element;
 }
 
@@ -23,7 +23,7 @@ export default function Badge(props: BadgeProps) {
     <Show
       when={props.onClick}
       fallback={
-        <span class={toneClass()} title={props.title}>
+        <span class={toneClass()} aria-label={props.ariaLabel}>
           {props.dot ? <span class="badge-dot" /> : null}
           {props.children}
         </span>
@@ -33,7 +33,7 @@ export default function Badge(props: BadgeProps) {
         <button
           type="button"
           class={toneClass()}
-          title={props.title}
+          aria-label={props.ariaLabel}
           onClick={() => onClick()()}
         >
           {props.dot ? <span class="badge-dot" /> : null}

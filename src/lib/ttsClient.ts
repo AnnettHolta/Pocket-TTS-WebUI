@@ -7,6 +7,10 @@
 
 type ProgressHandler = (stage: string, progress: number) => void;
 type QueueHandler = (snapshot: QueueSnapshot) => void;
+type SynthesisOptions = Omit<SynthesizePayload, "jobId" | "clientId" | "forceCpu">;
+type SynthesisResult = Extract<WorkerOutboundMessage, { type: "result" }>;
+
+class RetryOnCpuError extends Error {}
 
 interface PendingJob {
   receive: (message: Exclude<WorkerOutboundMessage, { type: "queue" }>) => void;
@@ -14,6 +18,7 @@ interface PendingJob {
 }
 
 const IDLE_TIMEOUT_MS = 5 * 60_000;
+const WEBGPU_IDLE_TIMEOUT_MS = 45_000;
 const EMPTY_QUEUE: QueueSnapshot = {
   activeJobId: null,
   activeClientId: null,
@@ -28,6 +33,7 @@ class TtsSharedClient {
     close: () => void;
   } | null = null;
   private useSharedWorker = typeof SharedWorker !== "undefined";
+  private forceCpu = false;
   private pending = new Map<string, PendingJob>();
   private queueListeners = new Set<QueueHandler>();
 
@@ -100,16 +106,41 @@ class TtsSharedClient {
     return () => { this.queueListeners.delete(listener); };
   }
 
-  synthesize(
-    params: Omit<SynthesizePayload, "jobId" | "clientId">,
+  async synthesize(
+    params: SynthesisOptions,
     onProgress: ProgressHandler,
-    signal: AbortSignal
-  ): Promise<Extract<WorkerOutboundMessage, { type: "result" }>> {
+    signal: AbortSignal,
+    onCpuFallback?: () => void,
+  ): Promise<SynthesisResult> {
+    const forceCpu = this.forceCpu;
+    try {
+      return await this.runAttempt(params, onProgress, signal, forceCpu);
+    } catch (error) {
+      if (forceCpu || !(error instanceof RetryOnCpuError)) throw error;
+      signal.throwIfAborted();
+      if (!this.forceCpu) {
+        this.forceCpu = true;
+        this.useSharedWorker = false;
+        this.reset(error);
+      }
+      onCpuFallback?.();
+      return this.runAttempt(params, onProgress, signal, true);
+    }
+  }
+
+  private runAttempt(
+    params: SynthesisOptions,
+    onProgress: ProgressHandler,
+    signal: AbortSignal,
+    forceCpu: boolean,
+  ): Promise<SynthesisResult> {
     return new Promise((resolve, reject) => {
       signal.throwIfAborted();
       const connection = this.connect();
       const jobId = crypto.randomUUID();
-      const payload = { ...params, jobId, clientId: this.clientId };
+      // The first attempt transfers its own copy so the reference survives a retry.
+      const refAudio24k = params.refAudio24k?.slice();
+      const payload: SynthesizePayload = { ...params, refAudio24k, jobId, clientId: this.clientId, forceCpu };
       let idleTimer: ReturnType<typeof setTimeout>;
       const cleanup = () => {
         clearTimeout(idleTimer);
@@ -120,40 +151,48 @@ class TtsSharedClient {
         cleanup();
         reject(error);
       };
-      const abort = () => {
+      const cancel = () => {
         try {
           connection.post({ type: "cancel", jobId, clientId: this.clientId });
         } catch {
           // A dead connection is reset by its error handler or the next failed post.
-        } finally {
-          fail(signal.reason);
         }
       };
-      const resetIdleTimer = () => {
+      const abort = () => {
+        cancel();
+        fail(signal.reason);
+      };
+      const resetIdleTimer = (webGpuOperation = false) => {
         clearTimeout(idleTimer);
+        const allowCpuRetry = webGpuOperation && !forceCpu;
         idleTimer = setTimeout(() => {
+          cancel();
+          if (allowCpuRetry) {
+            fail(new RetryOnCpuError("WebGPU stopped responding."));
+            return;
+          }
           this.useSharedWorker = false;
           this.reset(new Error("The speech worker stopped responding. Try generating again."));
-        }, IDLE_TIMEOUT_MS);
+        }, allowCpuRetry ? WEBGPU_IDLE_TIMEOUT_MS : IDLE_TIMEOUT_MS);
       };
       this.pending.set(jobId, {
         fail,
         receive: (message) => {
           if (message.type === "progress") {
-            resetIdleTimer();
+            resetIdleTimer(message.webGpuOperation);
             onProgress(message.stage, message.progress);
           } else if (message.type === "result") {
             cleanup();
             resolve(message);
           } else {
-            fail(new Error(message.message));
+            fail(message.retryOnCpu ? new RetryOnCpuError(message.message) : new Error(message.message));
           }
         },
       });
       signal.addEventListener("abort", abort, { once: true });
       resetIdleTimer();
       try {
-        connection.post({ type: "synthesize", payload }, params.refAudio24k ? [params.refAudio24k.buffer] : []);
+        connection.post({ type: "synthesize", payload }, refAudio24k ? [refAudio24k.buffer] : []);
       } catch (error) {
         this.useSharedWorker = false;
         this.reset(error instanceof Error ? error : new Error(String(error)));

@@ -1,4 +1,4 @@
-import { createMemo, For } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import { TbOutlineChevronLeft, TbOutlineChevronRight } from "solid-icons/tb";
 import { t } from "../../i18n";
 import "./TablePagination.css";
@@ -7,6 +7,7 @@ export interface TablePaginationProps {
   totalItems: number;
   page: number;
   pageSize: number;
+  hideSinglePageControls?: boolean;
   onPageChange: (page: number) => void;
 }
 
@@ -45,39 +46,42 @@ export default function TablePagination(props: TablePaginationProps) {
         })}
       </span>
 
-      <div class="table-pagination-controls">
-        <button
-          type="button"
-          class="table-page-btn"
-          disabled={props.page <= 1}
-          aria-label="Previous page"
-          onClick={() => props.onPageChange(props.page - 1)}
-        >
-          <TbOutlineChevronLeft size={13} />
-        </button>
+      <Show when={!props.hideSinglePageControls || totalPages() > 1}>
+        <div class="table-pagination-controls">
+          <button
+            type="button"
+            class="table-page-btn"
+            disabled={props.page <= 1}
+            aria-label="Previous page"
+            onClick={() => props.onPageChange(props.page - 1)}
+          >
+            <TbOutlineChevronLeft size={13} />
+          </button>
 
-        <For each={pageNumbers()}>
-          {(p) => (
-            <button
-              type="button"
-              class={`table-page-btn ${p === props.page ? "active" : ""}`}
-              onClick={() => props.onPageChange(p)}
-            >
-              {p}
-            </button>
-          )}
-        </For>
+          <For each={pageNumbers()}>
+            {(p) => (
+              <button
+                type="button"
+                class={`table-page-btn ${p === props.page ? "active" : ""}`}
+                aria-current={p === props.page ? "page" : undefined}
+                onClick={() => props.onPageChange(p)}
+              >
+                {p}
+              </button>
+            )}
+          </For>
 
-        <button
-          type="button"
-          class="table-page-btn"
-          disabled={props.page >= totalPages()}
-          aria-label="Next page"
-          onClick={() => props.onPageChange(props.page + 1)}
-        >
-          <TbOutlineChevronRight size={13} />
-        </button>
-      </div>
+          <button
+            type="button"
+            class="table-page-btn"
+            disabled={props.page >= totalPages()}
+            aria-label="Next page"
+            onClick={() => props.onPageChange(props.page + 1)}
+          >
+            <TbOutlineChevronRight size={13} />
+          </button>
+        </div>
+      </Show>
     </div>
   );
 }

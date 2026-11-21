@@ -81,7 +81,7 @@
   border: 1px solid transparent;
   outline: none;
   border-radius: var(--radius-md);
-  padding: var(--pad-control);
+  padding: var(--space-1-5) var(--space-2-5);
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -99,7 +99,7 @@
 }
 
 .btn-sm {
-  padding: var(--pad-control-sm);
+  padding: 0.1875rem var(--space-2);
   font-size: var(--text-xs);
   border-radius: var(--radius-sm);
 }

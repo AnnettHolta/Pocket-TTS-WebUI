@@ -25,7 +25,7 @@ Keep passages short. If generation reaches the model's output limit, split the p
 
 In **Voices**, add a short, clear recording you have permission to use. WAV and FLAC are good starting formats. Add transcript notes to identify what the speaker said, then save it. Select **Use in Studio** to generate with that recording. You can also add a recording directly from Studio.
 
-The browser stores reference clips as Ogg Vorbis at quality 10 and generated speech as Ogg Opus. Transcript notes are for your library. When you reuse an old generation whose reference is missing, reattach the original recording or clear the reference to generate with the default voice.
+The browser saves new reference voices and generated speech as Ogg Opus. Previously saved Ogg Vorbis voices remain playable. Transcript notes are for your library. When you reuse an old generation whose reference is missing, reattach the original recording or clear the reference to generate with the default voice.
 
 History and saved voices belong to this browser profile and site address. Clearing site data removes them. Download anything you want to keep. Older history entries can still restore their settings, and their audio is available only if it was saved.
 

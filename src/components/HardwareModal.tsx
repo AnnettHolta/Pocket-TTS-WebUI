@@ -23,13 +23,13 @@ export default function HardwareModal(props: HardwareModalProps) {
   };
 
   return (
-    <Modal open={props.open} title={t("hardware.title")} onClose={props.onClose}>
+    <Modal open={props.open} heading={t("hardware.title")} onClose={props.onClose}>
       <Show when={props.info} fallback={<p class="hint">{t("hardware.probing")}</p>}>
         {(info) => (
           <div class="hw-grid">
             <div class="hw-item">
               <span class="hw-label">{t("hardware.provider")}</span>
-              <span class={`hw-value ${info().webGpuAdapterReady ? "ok" : "warn"}`}>
+              <span class={`hw-value ${info().hardwareAcceleration === "WebGPU" ? "ok" : "warn"}`}>
                 {info().hardwareAcceleration}
               </span>
             </div>
@@ -98,6 +98,20 @@ export default function HardwareModal(props: HardwareModalProps) {
           </div>
         )}
       </Show>
+
+      <aside class="hw-dev-note" role="note">
+        <h4>{t("hardware.memoryNote")}</h4>
+        <dl class="hw-memory-runs">
+          <div>
+            <dt>INT8 + FP32 <span class="hw-memory-peak">4.74 GiB</span></dt>
+            <dd>{t("hardware.mixedMemoryRun")}</dd>
+          </div>
+          <div>
+            <dt>INT8 <span class="hw-memory-peak">~1.9 GB</span></dt>
+            <dd>{t("hardware.int8MemoryRun")}</dd>
+          </div>
+        </dl>
+      </aside>
 
       <div class="hw-footer">
         <button type="button" class="btn btn-secondary" onClick={() => props.onClose()}>

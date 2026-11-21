@@ -227,3 +227,47 @@ export class SentencePieceTokenizer {
   }
 }
 
+export interface SpeechChunk {
+  text: string;
+  tokens: number[];
+}
+
+export function splitSpeechText(text: string, maxTokens: number, encode: (text: string) => number[]): SpeechChunk[] {
+  const chunks: SpeechChunk[] = [];
+  const sentences = new Intl.Segmenter(undefined, { granularity: "sentence" });
+  const words = new Intl.Segmenter(undefined, { granularity: "word" });
+  let pending = "";
+
+  const fits = (value: string) => !value.trim() || encode(value).length <= maxTokens;
+  const flush = () => {
+    const text = pending.trim();
+    if (text) chunks.push({ text, tokens: encode(text) });
+    pending = "";
+  };
+
+  for (const { segment: sentence } of sentences.segment(text)) {
+    if (fits(pending + sentence)) {
+      pending += sentence;
+      continue;
+    }
+    flush();
+    if (fits(sentence)) {
+      pending = sentence;
+      continue;
+    }
+    for (const { segment: word } of words.segment(sentence)) {
+      if (!fits(pending + word)) flush();
+      if (fits(word)) {
+        pending += word;
+        continue;
+      }
+      for (const character of word) {
+        if (!fits(pending + character)) flush();
+        pending += character;
+      }
+    }
+  }
+  flush();
+  return chunks;
+}
+

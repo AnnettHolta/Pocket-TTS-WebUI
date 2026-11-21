@@ -1,9 +1,12 @@
 import * as ort from "onnxruntime-web/webgpu";
 import type { PrecisionMode } from "../lib/historyDb";
+import type { TtsProvider } from "./ttsTypes";
 import {
   encodeWav,
   parseNpyFloat32,
   SentencePieceTokenizer,
+  splitSpeechText,
+  type SpeechChunk,
 } from "./pocketTtsHelpers";
 
 export interface BundleConfig {
@@ -30,7 +33,7 @@ interface TensorMeta {
 
 interface LoadedModelPack {
   key: string;
-  provider: string;
+  provider: TtsProvider;
   bundle: BundleConfig;
   tokenizer: SentencePieceTokenizer;
   bosBeforeVoice: Float32Array;
@@ -42,7 +45,7 @@ interface LoadedModelPack {
 }
 
 const HF_BASE = "https://huggingface.co/stephvax/pocket-tts-onnx/resolve/main/onnx";
-const packCache = new Map<string, LoadedModelPack>();
+let cachedPack: LoadedModelPack | null = null;
 let ortInitialized = false;
 
 function ensureOrtEnv(): void {
@@ -77,13 +80,44 @@ async function fetchBuffer(url: string): Promise<ArrayBuffer> {
   return res.arrayBuffer();
 }
 
-async function createSession(
-  buffer: ArrayBuffer,
-  providers: ort.InferenceSession.ExecutionProviderConfig[]
-): Promise<ort.InferenceSession> {
-  return ort.InferenceSession.create(buffer, {
-    executionProviders: providers,
-  });
+export class WebGpuInferenceError extends Error {
+  constructor(cause: unknown) {
+    super("WebGPU inference failed.", { cause });
+    this.name = "WebGpuInferenceError";
+  }
+}
+
+async function runOrt<T>(provider: TtsProvider, operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (provider === "webgpu") throw new WebGpuInferenceError(error);
+    throw error;
+  }
+}
+
+function createSession(buffer: ArrayBuffer, provider: TtsProvider): Promise<ort.InferenceSession> {
+  return runOrt(provider, () => ort.InferenceSession.create(buffer, {
+    executionProviders: [provider],
+  }));
+}
+
+function runSession(
+  provider: TtsProvider,
+  session: ort.InferenceSession,
+  feeds: ort.InferenceSession.FeedsType,
+) {
+  return runOrt(provider, () => session.run(feeds));
+}
+
+async function releaseSessions(sessions: ort.InferenceSession[]) {
+  for (const session of sessions) {
+    try {
+      await session.release();
+    } catch (error) {
+      console.warn("Could not release a speech model session:", error);
+    }
+  }
 }
 
 function getInputMetas(session: ort.InferenceSession): TensorMeta[] {
@@ -184,13 +218,31 @@ function mapStateOutputsToInputs(
 async function loadModelPack(
   languageId: string,
   precision: PrecisionMode,
+  provider: TtsProvider,
   needsEncoder: boolean,
-  onProgress: (stage: string, progress: number) => void
+  onProgress: RunSynthesisInput["onProgress"],
 ): Promise<LoadedModelPack> {
-  const key = `${languageId}:${precision}`;
-  const cached = packCache.get(key);
-  if (cached && (!needsEncoder || cached.mimiEncoder !== null)) {
+  const key = `${languageId}:${precision}:${provider}`;
+  const cached = cachedPack;
+  const gpu = provider === "webgpu";
+  if (cached?.key === key) {
+    if (needsEncoder && !cached.mimiEncoder) {
+      onProgress("Loading voice encoder", 0.56);
+      const baseUrl = await resolveModelBaseUrl(languageId);
+      const encoder = await fetchBuffer(`${baseUrl}/mimi_encoder.onnx`);
+      onProgress("Initializing voice encoder", 0.58, gpu);
+      cached.mimiEncoder = await createSession(encoder, provider);
+    }
     return cached;
+  }
+
+  if (cached) {
+    cachedPack = null;
+    onProgress("Releasing previous model", 0.07, cached.provider === "webgpu");
+    await releaseSessions([
+      cached.textConditioner, cached.flowLmMain, cached.flowLmFlow, cached.mimiDecoder,
+      ...(cached.mimiEncoder ? [cached.mimiEncoder] : []),
+    ]);
   }
 
   ensureOrtEnv();
@@ -211,12 +263,6 @@ async function loadModelPack(
   const tokenizer = SentencePieceTokenizer.fromModelBuffer(tokenizerBuf);
   const bosBeforeVoice = parseNpyFloat32(bosBuf).data;
 
-  const hasWebGpu = "gpu" in navigator;
-  const providers: ort.InferenceSession.ExecutionProviderConfig[] = hasWebGpu
-    ? ["webgpu", "wasm"]
-    : ["wasm"];
-  const providerLabel = hasWebGpu ? "webgpu" : "wasm";
-
   const flowFile =
     precision === "int8" ? "flow_lm_flow_int8.onnx" : "flow_lm_flow.onnx";
   const decoderFile =
@@ -230,40 +276,35 @@ async function loadModelPack(
     fetchBuffer(`${baseUrl}/${decoderFile}`),
   ]);
 
-  // WebGPU EP requires sequential InferenceSession.create() calls.
-  onProgress("Initializing text conditioner", 0.38);
-  const textConditioner = await createSession(condBuf, providers);
-
-  onProgress("Initializing flow LM backbone", 0.44);
-  const flowLmMain = await createSession(mainBuf, providers);
-
-  onProgress("Initializing flow net", 0.5);
-  const flowLmFlow = await createSession(flowBuf, providers);
-
-  onProgress("Initializing Mimi decoder", 0.55);
-  const mimiDecoder = await createSession(decBuf, providers);
-
-  let mimiEncoder = cached?.mimiEncoder ?? null;
-  if (needsEncoder && !mimiEncoder) {
-    onProgress("Loading voice encoder", 0.58);
-    const encBuf = await fetchBuffer(`${baseUrl}/mimi_encoder.onnx`);
-    mimiEncoder = await createSession(encBuf, providers);
-  }
-
-  const pack: LoadedModelPack = {
-    key,
-    provider: providerLabel,
-    bundle,
-    tokenizer,
-    bosBeforeVoice,
-    textConditioner,
-    flowLmMain,
-    flowLmFlow,
-    mimiDecoder,
-    mimiEncoder,
+  const sessions: ort.InferenceSession[] = [];
+  const init = async (stage: string, progress: number, buffer: ArrayBuffer) => {
+    onProgress(stage, progress, gpu);
+    const session = await createSession(buffer, provider);
+    sessions.push(session);
+    return session;
   };
-  packCache.set(key, pack);
-  return pack;
+  try {
+    // Initialize sessions sequentially for WebGPU.
+    const textConditioner = await init("Initializing text conditioner", 0.38, condBuf);
+    const flowLmMain = await init("Initializing flow LM backbone", 0.44, mainBuf);
+    const flowLmFlow = await init("Initializing flow net", 0.5, flowBuf);
+    const mimiDecoder = await init("Initializing Mimi decoder", 0.55, decBuf);
+    let mimiEncoder: ort.InferenceSession | null = null;
+    if (needsEncoder) {
+      onProgress("Loading voice encoder", 0.56);
+      const encoder = await fetchBuffer(`${baseUrl}/mimi_encoder.onnx`);
+      mimiEncoder = await init("Initializing voice encoder", 0.58, encoder);
+    }
+
+    return cachedPack = {
+      key, provider, bundle, tokenizer, bosBeforeVoice,
+      textConditioner, flowLmMain, flowLmFlow, mimiDecoder, mimiEncoder,
+    };
+  } catch (error) {
+    // Don't delay the CPU retry on a GPU context that just reported an error.
+    if (!(error instanceof WebGpuInferenceError)) await releaseSessions(sessions);
+    throw error;
+  }
 }
 
 export interface RunSynthesisInput {
@@ -272,17 +313,21 @@ export interface RunSynthesisInput {
   precision: PrecisionMode;
   temperature: number;
   refAudio24k?: Float32Array;
-  onProgress: (stage: string, progress: number) => void;
+  forceCpu?: boolean;
+  onProgress: (stage: string, progress: number, webGpuOperation?: boolean) => void;
 }
 
 export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
   wavBuffer: ArrayBuffer;
   durationSec: number;
-  provider: string;
+  provider: TtsProvider;
 }> {
+  const provider: TtsProvider = !input.forceCpu && "gpu" in navigator && navigator.gpu ? "webgpu" : "wasm";
+  const gpu = provider === "webgpu";
   const pack = await loadModelPack(
     input.languageId,
     input.precision,
+    provider,
     Boolean(input.refAudio24k),
     input.onProgress
   );
@@ -294,33 +339,22 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
       normalizedText = normalizedText.split(from).join(to);
     }
   }
-  const tokenIds = pack.tokenizer.encode(normalizedText);
-  if (tokenIds.length === 0) {
+  const maxTokens = pack.bundle.max_token_per_chunk || 50;
+  const chunks = splitSpeechText(normalizedText, maxTokens, (text) => pack.tokenizer.encode(text));
+  if (chunks.length === 0) {
     throw new Error("Text produced 0 tokens");
   }
 
-  input.onProgress("Conditioning text", 0.66);
-  const tokenTensor = new ort.Tensor(
-    "int64",
-    BigInt64Array.from(tokenIds, (id) => BigInt(id)),
-    [1, tokenIds.length]
-  );
-  const condOut = await pack.textConditioner.run({
-    [pack.textConditioner.inputNames[0]]: tokenTensor,
-  });
-  const textEmb = condOut[pack.textConditioner.outputNames[0]];
-
   // Optional reference voice encoding
   let voicePrompt: Float32Array = pack.bosBeforeVoice;
-  const condDim = pack.bundle.conditioning_dim || 1024;
   if (input.refAudio24k && pack.mimiEncoder) {
-    input.onProgress("Encoding reference voice", 0.7);
+    input.onProgress("Encoding reference voice", 0.64, gpu);
     const audioTensor = new ort.Tensor("float32", input.refAudio24k, [
       1,
       1,
       input.refAudio24k.length,
     ]);
-    const encOut = await pack.mimiEncoder.run({
+    const encOut = await runSession(provider, pack.mimiEncoder, {
       [pack.mimiEncoder.inputNames[0]]: audioTensor,
     });
     const encoded = encOut[pack.mimiEncoder.outputNames[0]].data as Float32Array;
@@ -333,6 +367,57 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
       voicePrompt = encoded;
     }
   }
+
+  const pcmChunks: Float32Array[] = [];
+  for (const [index, chunk] of chunks.entries()) {
+    const onProgress: RunSynthesisInput["onProgress"] = (stage, progress, webGpuOperation) => {
+      const chunkProgress = progress - 0.66;
+      const label = chunks.length > 1 ? `${stage} (${index + 1}/${chunks.length})` : stage;
+      input.onProgress(label, 0.66 + (0.31 * index + chunkProgress) / chunks.length, webGpuOperation);
+    };
+    const pcm = await synthesizeChunk(pack, chunk, voicePrompt, input.temperature, onProgress);
+    if (!pcm) {
+      const part = chunks.length > 1 ? ` for part ${index + 1} of ${chunks.length}` : "";
+      const hint = input.refAudio24k ? "Try a shorter reference voice or rephrase the text." : "Try rephrasing the text.";
+      throw new Error(`Speech generation did not finish${part}. ${hint}`);
+    }
+    pcmChunks.push(...pcm);
+  }
+
+  const totalSamples = pcmChunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const pcm = new Float32Array(totalSamples);
+  let offset = 0;
+  for (const chunk of pcmChunks) {
+    pcm.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  input.onProgress("Encoding WAV", 0.98);
+  const sampleRate = pack.bundle.sample_rate || 24000;
+  return { wavBuffer: encodeWav(pcm, sampleRate), durationSec: totalSamples / sampleRate, provider };
+}
+
+async function synthesizeChunk(
+  pack: LoadedModelPack,
+  chunk: SpeechChunk,
+  voicePrompt: Float32Array,
+  temperature: number,
+  onProgress: RunSynthesisInput["onProgress"],
+): Promise<Float32Array[] | null> {
+  const provider = pack.provider;
+  const gpu = provider === "webgpu";
+  const tokenIds = chunk.tokens;
+  const condDim = pack.bundle.conditioning_dim || 1024;
+  onProgress("Conditioning text", 0.66, gpu);
+  const tokenTensor = new ort.Tensor(
+    "int64",
+    BigInt64Array.from(tokenIds, (id) => BigInt(id)),
+    [1, tokenIds.length]
+  );
+  const condOut = await runSession(provider, pack.textConditioner, {
+    [pack.textConditioner.inputNames[0]]: tokenTensor,
+  });
+  const textEmb = condOut[pack.textConditioner.outputNames[0]];
 
   // Prepare flow_lm_main state tensors from inputMetadata
   const mainMetas = getInputMetas(pack.flowLmMain);
@@ -362,7 +447,8 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
       [seqInputName]: emptySeq,
       [textInputName]: textTensorOrCombined(textEmb, voiceTensor),
     };
-    const initOut = await pack.flowLmMain.run(condFeeds);
+    onProgress("Preparing voice conditioning", 0.71, gpu);
+    const initOut = await runSession(provider, pack.flowLmMain, condFeeds);
     mapStateOutputsToInputs(
       pack.flowLmMain.inputNames,
       pack.flowLmMain.outputNames,
@@ -372,12 +458,12 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
   }
 
   // Autoregressive latent generation (matching PocketTTS.cpp)
-  const wordCount = normalizedText.split(/\s+/).filter(Boolean).length;
+  const wordCount = chunk.text.split(/\s+/).length;
   const eosExtraFrames = wordCount <= 4 ? 5 : 3;
   const eosThreshold = -4.0;
   const lsdSteps = 1;
   const dt = 1.0 / lsdSteps;
-  const maxFrames = Math.min(200, Math.max(24, tokenIds.length * 8));
+  const maxFrames = Math.min(200, Math.max(48, tokenIds.length * 8));
   const flowConditioningInput = pack.flowLmFlow.inputMetadata.find(({ name }) => name === "c");
   const flowConditioningRank = flowConditioningInput?.isTensor
     ? flowConditioningInput.shape.length
@@ -387,13 +473,13 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
   let currentLatent = new Float32Array(latentDim);
   currentLatent.fill(Number.NaN); // NaN = BOS latent
 
-  const noiseStd = Math.sqrt(Math.max(0, input.temperature));
+  const noiseStd = Math.sqrt(Math.max(0, temperature));
   let eosHit = false;
   let extraCount = 0;
 
   for (let step = 0; step < maxFrames; step++) {
     if (step % 4 === 0) {
-      input.onProgress("Generating audio frames", 0.72 + (step / maxFrames) * 0.18);
+      onProgress("Generating audio frames", 0.72 + (step / maxFrames) * 0.18, gpu);
     }
 
     const stepFeeds: Record<string, ort.Tensor> = {
@@ -408,7 +494,7 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
       ]);
     }
 
-    const mainOut = await pack.flowLmMain.run(stepFeeds);
+    const mainOut = await runSession(provider, pack.flowLmMain, stepFeeds);
     mapStateOutputsToInputs(
       pack.flowLmMain.inputNames,
       pack.flowLmMain.outputNames,
@@ -447,7 +533,7 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
     for (let j = 0; j < lsdSteps; j++) {
       const s = j / lsdSteps;
       const t = s + dt;
-      const flowOut = await pack.flowLmFlow.run({
+      const flowOut = await runSession(provider, pack.flowLmFlow, {
         c: condTensor,
         s: new ort.Tensor("float32", new Float32Array([s]), [1, 1]),
         t: new ort.Tensor("float32", new Float32Array([t]), [1, 1]),
@@ -464,12 +550,10 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
     currentLatent = nextLatent;
   }
 
-  if (!eosHit && generatedFrames.length === 200) {
-    throw new Error("This passage reached the speech length limit. Try splitting it into shorter sections.");
-  }
+  if (!eosHit) return null;
 
   // Decode generated latents with Mimi decoder using inputMetadata-typed state
-  input.onProgress("Decoding waveform", 0.92);
+  onProgress("Decoding waveform", 0.92, gpu);
   const decMetas = getInputMetas(pack.mimiDecoder);
   const decStateFeeds: Record<string, ort.Tensor> = {};
   let decLatentName = pack.mimiDecoder.inputNames[0];
@@ -486,13 +570,13 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
   const pcmChunks: Float32Array[] = [];
   for (const frame of generatedFrames) {
     if (pcmChunks.length % 8 === 0) {
-      input.onProgress("Decoding waveform", 0.92 + (pcmChunks.length / generatedFrames.length) * 0.05);
+      onProgress("Decoding waveform", 0.92 + (pcmChunks.length / generatedFrames.length) * 0.05, gpu);
     }
     const decFeeds: Record<string, ort.Tensor> = {
       ...decStateFeeds,
       [decLatentName]: new ort.Tensor("float32", frame, [1, 1, latentDim]),
     };
-    const decOut = await pack.mimiDecoder.run(decFeeds);
+    const decOut = await runSession(provider, pack.mimiDecoder, decFeeds);
     mapStateOutputsToInputs(
       pack.mimiDecoder.inputNames,
       pack.mimiDecoder.outputNames,
@@ -503,24 +587,7 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
     pcmChunks.push(new Float32Array(audioData));
   }
 
-  const totalSamples = pcmChunks.reduce((sum, c) => sum + c.length, 0);
-  const pcm = new Float32Array(totalSamples);
-  let offset = 0;
-  for (const chunk of pcmChunks) {
-    pcm.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  input.onProgress("Encoding WAV", 0.98);
-  const sampleRate = pack.bundle.sample_rate || 24000;
-  const wavBuffer = encodeWav(pcm, sampleRate);
-  const durationSec = pcm.length / sampleRate;
-
-  return {
-    wavBuffer,
-    durationSec,
-    provider: pack.provider,
-  };
+  return pcmChunks;
 }
 
 function textTensorOrCombined(textEmb: ort.Tensor, voiceTensor: ort.Tensor): ort.Tensor {

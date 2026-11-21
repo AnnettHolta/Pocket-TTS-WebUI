@@ -5,7 +5,7 @@ import wasmUrl from "@ffmpeg/core/wasm?url";
 
 const worker = self as unknown as DedicatedWorkerGlobalScope;
 
-worker.onmessage = async ({ data }: MessageEvent<{ bytes: ArrayBuffer; codec: "opus" | "vorbis" }>) => {
+worker.onmessage = async ({ data }: MessageEvent<{ bytes: ArrayBuffer; bitrateKbps: number }>) => {
   const input = "input.audio";
   const output = "output.ogg";
   try {
@@ -14,10 +14,9 @@ worker.onmessage = async ({ data }: MessageEvent<{ bytes: ArrayBuffer; codec: "o
       mainScriptUrlOrBlob: `#${btoa(JSON.stringify({ wasmURL }))}`,
     });
     core.FS.writeFile(input, new Uint8Array(data.bytes));
-    const codecArgs = data.codec === "opus"
-      ? ["-c:a", "libopus", "-b:a", "32k"]
-      : ["-c:a", "libvorbis", "-q:a", "10"];
-    const status = core.exec("-i", input, "-map", "0:a:0", "-map_metadata", "-1", ...codecArgs, output);
+    const status = core.exec(
+      "-i", input, "-map", "0:a:0", "-map_metadata", "-1", "-c:a", "libopus", "-b:a", `${data.bitrateKbps}k`, output,
+    );
     if (status !== 0) throw new Error("Could not encode this audio. Check that the file is playable.");
     const bytes = core.FS.readFile(output).slice().buffer;
     worker.postMessage({ bytes }, [bytes]);

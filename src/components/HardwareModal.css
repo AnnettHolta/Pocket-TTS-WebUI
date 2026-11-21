@@ -44,6 +44,44 @@
   color: var(--color-warn);
 }
 
+.hw-dev-note {
+  background: rgb(10 132 255 / 9%);
+  border: 1px solid rgb(10 132 255 / 28%);
+  border-radius: var(--radius-md);
+  padding: var(--space-2-5) var(--space-3);
+  font-size: var(--text-xs);
+}
+
+.hw-dev-note h4 {
+  margin: 0;
+  color: #93c9ff;
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.hw-memory-runs {
+  display: grid;
+  gap: var(--space-2-5);
+  margin: var(--space-2-5) 0 0;
+}
+
+.hw-memory-runs dt {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2);
+  font-weight: 600;
+}
+
+.hw-memory-runs dd {
+  margin: var(--space-0-5) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.hw-memory-peak {
+  font-family: var(--font-mono);
+}
+
 .hw-footer {
   display: flex;
   justify-content: flex-end;

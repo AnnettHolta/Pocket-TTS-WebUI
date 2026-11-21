@@ -1,78 +1,150 @@
-.history-col-time {
-  width: 122px;
+.history-page {
+  padding-block: var(--space-3) var(--space-5);
 }
 
-.history-col-model {
-  width: 158px;
-}
-
-.history-col-files {
-  width: 215px;
-}
-
-.history-col-actions {
-  width: 112px;
-}
-
-.history-cell-time {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.history-cell-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--color-text);
-}
-
-.history-cell-model {
+.history-tools {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-0-5);
-}
-
-.history-model-name {
-  font-size: var(--text-xs);
-  font-weight: 500;
-  color: var(--color-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.history-model-sub {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.history-cell-files {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-5);
-}
-
-.history-file-line {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  color: var(--color-text-code);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.history-file-line.muted {
-  color: var(--color-text-muted);
-}
-
-.history-cell-actions {
-  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  flex: 0 1 clamp(8rem, 45vw, 14rem);
   gap: var(--space-1);
+  max-width: 100%;
+}
+
+.history-tools .library-search {
+  flex: 1;
+  width: 0;
+}
+
+.history-row:last-child {
+  border-bottom: 0;
+}
+
+.history-no-audio {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  background: var(--color-surface-2);
+}
+
+.history-preview-error {
+  margin: 0 0 var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+}
+
+.history-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-inline: var(--space-1);
+}
+
+.history-pagination > .table-pagination {
+  flex: 1 1 15rem;
+  padding: 0;
+  border: 0;
+}
+
+.history-pagination .table-page-btn.active {
+  background: var(--color-surface-3);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.history-pagination > .library-menu {
+  margin-inline-start: auto;
+}
+
+.history-pagination .library-menu-panel {
+  inset: auto 0 calc(100% + var(--space-1)) auto;
+  min-width: 8rem;
+}
+
+@supports selector(details::details-content) {
+  .history-pagination .library-menu::details-content {
+    inset: auto 0 calc(100% + var(--space-1)) auto;
+    transform-origin: bottom center;
+  }
+}
+
+.history-pagination .history-size-option {
+  justify-content: space-between;
   white-space: nowrap;
+}
+
+.history-size-option[aria-pressed="true"] {
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+
+.history-detail {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.history-detail > p,
+.history-detail dl,
+.history-detail dd {
+  margin: 0;
+}
+
+.history-detail-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.history-detail dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.history-detail dt {
+  color: var(--color-text-muted);
+}
+
+.history-detail dd {
+  overflow-wrap: anywhere;
+}
+
+.history-detail .audio-player-bar {
+  flex-wrap: wrap;
+}
+
+.history-detail .audio-player-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .history-page {
+    padding: var(--space-2) var(--space-1) var(--space-6);
+  }
+}
+
+@media (pointer: coarse) {
+  .history-row {
+    gap: var(--space-4);
+  }
+
+  .history-row .library-preview,
+  .history-row .library-action,
+  .history-row summary {
+    position: relative;
+  }
+
+  .history-row .library-preview::before,
+  .history-row .library-action::before,
+  .history-row summary::before {
+    position: absolute;
+    inset: -8px;
+    content: "";
+  }
 }

@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { runPocketTtsSynthesis } from "./pocketTtsEngine";
+import { runPocketTtsSynthesis, WebGpuInferenceError } from "./pocketTtsEngine";
 import type {
   QueueSnapshot,
   SynthesizePayload,
@@ -18,6 +18,7 @@ const connectedPorts = new Set<MessagePort>();
 const jobQueue: QueuedJob[] = [];
 let activeJob: QueuedJob | null = null;
 let isProcessing = false;
+let webGpuFailed = false;
 
 function broadcast(msg: WorkerOutboundMessage, transfer?: Transferable[]): void {
   if (connectedPorts.size > 0) {
@@ -79,17 +80,19 @@ async function processQueue(): Promise<void> {
     emitQueueSnapshot();
 
     const startedAt = performance.now();
-    const { jobId, clientId, text, languageId, precision, temperature, refAudio24k } =
+    const { jobId, clientId, text, languageId, precision, temperature, refAudio24k, forceCpu } =
       next.payload;
 
     try {
+      if (webGpuFailed && !forceCpu) throw new WebGpuInferenceError("This worker's WebGPU runtime already failed.");
       const result = await runPocketTtsSynthesis({
         text,
         languageId,
         precision,
         temperature,
         refAudio24k,
-        onProgress: (stage, progress) => {
+        forceCpu,
+        onProgress: (stage, progress, webGpuOperation) => {
           if (next.cancelled) throw new Error("Generation cancelled.");
           sendToPort(next.port, {
             type: "progress",
@@ -97,6 +100,7 @@ async function processQueue(): Promise<void> {
             clientId,
             stage,
             progress,
+            webGpuOperation,
           });
         },
       });
@@ -117,11 +121,17 @@ async function processQueue(): Promise<void> {
         [result.wavBuffer]
       );
     } catch (err) {
+      const retryOnCpu = err instanceof WebGpuInferenceError;
+      if (retryOnCpu && !webGpuFailed) {
+        webGpuFailed = true;
+        console.warn("WebGPU speech inference failed:", err.cause);
+      }
       if (!next.cancelled) sendToPort(next.port, {
         type: "error",
         jobId,
         clientId,
         message: err instanceof Error ? err.message : String(err),
+        retryOnCpu,
       });
     } finally {
       activeJob = null;

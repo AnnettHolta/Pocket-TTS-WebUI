@@ -1,6 +1,26 @@
-type OggCodec = "opus" | "vorbis";
+import { decodeAudio } from "./audioUtils";
 
-export async function encodeOgg(input: Blob, codec: OggCodec, signal?: AbortSignal): Promise<Blob> {
+export async function prepareReferenceAudio(input: Blob): Promise<Blob> {
+  const oggHeaderSize = 27;
+  const maxSegments = 255;
+  const opusSignature = "OpusHead";
+  const header = new Uint8Array(await input.slice(0, oggHeaderSize + maxSegments + opusSignature.length).arrayBuffer());
+  // The first Ogg page starts with a segment table followed by the Opus identification packet.
+  const packetOffset = oggHeaderSize + header[26];
+  if (header[4] === 0 && header[5] === 2 && header[26] > 0 && header[27] >= 19
+    && String.fromCharCode(...header.subarray(0, 4)) === "OggS"
+    && String.fromCharCode(...header.subarray(packetOffset, packetOffset + opusSignature.length)) === opusSignature) {
+    const ogg = input.slice(0, input.size, "audio/ogg");
+    await decodeAudio(ogg);
+    return ogg;
+  }
+  return encodeOggOpus(input, { bitrateKbps: 96 });
+}
+
+export async function encodeOggOpus(
+  input: Blob,
+  { bitrateKbps = 32, signal }: { bitrateKbps?: number; signal?: AbortSignal } = {},
+): Promise<Blob> {
   const bytes = await input.arrayBuffer();
   signal?.throwIfAborted();
   const worker = new Worker(new URL("../workers/ogg.worker.ts", import.meta.url), {
@@ -31,7 +51,7 @@ export async function encodeOgg(input: Blob, codec: OggCodec, signal?: AbortSign
       worker.onerror = () => fail("Could not start the audio compressor.");
       worker.onmessageerror = () => fail("Could not read the compressed audio.");
       try {
-        worker.postMessage({ bytes, codec }, [bytes]);
+        worker.postMessage({ bytes, bitrateKbps }, [bytes]);
       } catch (error) {
         clearTimeout(timer);
         reject(error);

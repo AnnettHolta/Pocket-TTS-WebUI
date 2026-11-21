@@ -44,6 +44,8 @@ describe("InferenceRefVoice", () => {
           voicePath="C:\voices\speaker.wav"
           voiceTranscript="Sample voice line"
           voiceSha256="abcdef1234567890"
+          voiceNeedsAttachment={false}
+          onUseSavedVoice={vi.fn()}
           onApplyVoice={vi.fn()}
           onClear={onClear}
         />

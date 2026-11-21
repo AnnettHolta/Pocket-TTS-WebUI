@@ -1,18 +1,20 @@
 import { createEffect, createSignal, onCleanup, Show, untrack } from "solid-js";
-import { TbOutlineMicrophone } from "solid-icons/tb";
+import { TbOutlineUpload } from "solid-icons/tb";
 import { t } from "../i18n";
 import { computeFileSha256, getVoiceTranscript, saveVoiceTranscript } from "../lib/historyDb";
-import { encodeOgg } from "../lib/oggAudio";
+import { prepareReferenceAudio } from "../lib/oggAudio";
 import AudioPlayer from "./AudioPlayer";
 import Modal from "./Modal";
 import "./RefVoiceModal.css";
 
 export interface RefVoiceModalProps {
   open: boolean;
+  heading?: string;
   initialFile: File | null;
   initialPath: string;
   initialTranscript: string;
   initialSha256: string | null;
+  droppedFile?: File | null;
   onClose: () => void;
   onApply: (payload: {
     file: File | null;
@@ -34,6 +36,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
   const [isSaving, setIsSaving] = createSignal(false);
   const [errorMessage, setErrorMessage] = createSignal("");
   let selection = 0;
+  let fileInput: HTMLInputElement | undefined;
 
   const revokePreview = (url: string | null) => {
     if (url) URL.revokeObjectURL(url);
@@ -45,20 +48,24 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
   });
 
   createEffect(
-    () => props.open,
-    (isOpen) => {
-      if (!isOpen) {
+    () => {
+      if (!props.open) return null;
+      // Snapshot the draft on open while lazy JSX props have a reactive owner.
+      return untrack(() => ({
+        file: props.initialFile,
+        path: props.initialPath,
+        transcript: props.initialTranscript,
+        sha256: props.initialSha256,
+        dropped: props.droppedFile,
+      }));
+    },
+    (initial) => {
+      if (!initial) {
         selection++;
         revokePreview(untrack(previewUrl));
         setPreviewUrl(null);
         return;
       }
-      const initial = untrack(() => ({
-        file: props.initialFile,
-        path: props.initialPath,
-        transcript: props.initialTranscript,
-        sha256: props.initialSha256,
-      }));
       setDraftFile(initial.file);
       setDraftPath(initial.path);
       setDraftTranscript(initial.transcript);
@@ -68,6 +75,8 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
       setErrorMessage("");
 
       setPreviewUrl(initial.file ? URL.createObjectURL(initial.file) : null);
+      const dropped = initial.dropped;
+      if (dropped) untrack(() => void processSelectedFile(dropped));
     }
   );
 
@@ -140,7 +149,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
 
     try {
       const existing = await getVoiceTranscript(sha256);
-      const audio = existing?.audio ?? await encodeOgg(file, "vorbis");
+      const audio = existing?.audio ?? await prepareReferenceAudio(file);
       if (current !== selection) return;
       await saveVoiceTranscript({
         sha256,
@@ -161,7 +170,7 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
   };
 
   return (
-    <Modal open={props.open} title={t("refVoice.modalTitle")} onClose={props.onClose} busy={isSaving()}>
+    <Modal open={props.open} heading={props.heading ?? t("refVoice.modalTitle")} onClose={props.onClose} busy={isSaving()}>
       <div class="ref-modal-body">
         <div
           class={`ref-dropzone ${isDragging() ? "dragging" : ""}`}
@@ -173,10 +182,10 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
           onDrop={handleDrop}
         >
           <div class="ref-dropzone-info">
-            <div class="ref-dropzone-icon">
-              <TbOutlineMicrophone size={16} />
+            <div class="ref-dropzone-icon" aria-hidden="true">
+              <TbOutlineUpload size={17} />
             </div>
-            <div>
+            <div class="ref-dropzone-copy">
               <div class="ref-dropzone-title">
                 {draftFile() ? draftFile()!.name : t("refVoice.dropTitle")}
               </div>
@@ -185,44 +194,26 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
           </div>
 
           <input
-            id="ref-modal-file"
+            ref={fileInput}
             type="file"
-            accept="audio/wav,audio/flac,audio/*"
-            class="ref-voice-hidden-input"
+            accept="audio/*,.ogg,.opus"
+            hidden
             onChange={handleFileInput}
           />
-          <label for="ref-modal-file" class="btn btn-secondary btn-sm">
+          <button type="button" class="btn btn-secondary btn-sm" onClick={() => fileInput?.click()} disabled={isSaving()}>
             {t("refVoice.choose")}
-          </label>
+          </button>
         </div>
 
-        <Show when={isHashing() || draftSha256()}>
-          <div class="ref-modal-hash-row">
-            <span class="pill-value">
-              {isHashing()
-                ? t("refVoice.hashing")
-                : `sha256: ${draftSha256()!.slice(0, 12)}…`}
-            </span>
-            <Show when={matchedStored()}>
-              <span class="ref-modal-match">{t("refVoice.matched")}</span>
-            </Show>
-          </div>
+        <Show when={isHashing() || matchedStored()}>
+          <p class="ref-modal-status" role="status">
+            {t(isHashing() ? "library.loading" : "refVoice.savedNotes")}
+          </p>
         </Show>
 
         <Show when={previewUrl()}>
-          {(url) => <AudioPlayer src={url()} title={t("refVoice.previewTitle")} />}
+          {(url) => <AudioPlayer src={url()} heading={t("refVoice.previewTitle")} />}
         </Show>
-
-        <div class="field">
-          <label for="ref-modal-path">{t("refVoice.pathLabel")}</label>
-          <input
-            id="ref-modal-path"
-            type="text"
-            value={draftPath()}
-            onInput={(e) => setDraftPath(e.currentTarget.value)}
-            placeholder="C:\voices\speaker.wav"
-          />
-        </div>
 
         <div class="field">
           <div class="field-header">
@@ -240,8 +231,18 @@ export default function RefVoiceModal(props: RefVoiceModalProps) {
           />
         </div>
 
+        <details class="ref-modal-source">
+          <summary>{t("refVoice.pathLabel")}</summary>
+          <input
+            type="text"
+            aria-label={t("refVoice.pathLabel")}
+            value={draftPath()}
+            onInput={(e) => setDraftPath(e.currentTarget.value)}
+          />
+        </details>
+
         <Show when={errorMessage()}>
-          <p role="alert">{errorMessage()}</p>
+          <p class="ref-modal-error" role="alert">{errorMessage()}</p>
         </Show>
         <div class="ref-modal-footer">
           <button

@@ -1,4 +1,4 @@
-import { flush } from "solid-js";
+import { createSignal, flush } from "solid-js";
 import { render } from "@solidjs/web";
 import { afterEach, describe, expect, it } from "vitest";
 import Table from "./Table";
@@ -19,10 +19,10 @@ describe("Table", () => {
     dispose = render(
       () => (
         <Table
-          title="Sample Table"
+          heading="Sample Table"
           columns={[{ key: "name", label: "Name" }]}
           items={items}
-          renderRow={(item) => <td>{item.name}</td>}
+          renderRow={(item) => <td>{item().name}</td>}
         />
       ),
       host
@@ -38,6 +38,31 @@ describe("Table", () => {
     expect(host.querySelectorAll("tbody tr")).toHaveLength(15);
   });
 
+  it("updates saved records without replacing rows with the same key", () => {
+    const [items, setItems] = createSignal([{ id: "clip", name: "Before" }]);
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    dispose = render(
+      () => (
+        <Table
+          heading="Saved records"
+          columns={[{ key: "name", label: "Name" }]}
+          items={items()}
+          rowKey={(item) => item.id}
+          renderRow={(item) => <td>{item().name}</td>}
+        />
+      ),
+      host,
+    );
+
+    const row = host.querySelector("tbody tr");
+    expect(row?.textContent).toBe("Before");
+    setItems([{ id: "clip", name: "After" }]);
+    flush();
+    expect(host.querySelector("tbody tr")).toBe(row);
+    expect(row?.textContent).toBe("After");
+  });
+
   it("renders emptyMessage when items are empty", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
@@ -45,7 +70,7 @@ describe("Table", () => {
     dispose = render(
       () => (
         <Table
-          title="Empty Table"
+          heading="Empty Table"
           columns={[{ key: "name", label: "Name" }]}
           items={[]}
           emptyMessage="Nothing here yet."

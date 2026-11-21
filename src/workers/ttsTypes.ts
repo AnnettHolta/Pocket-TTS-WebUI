@@ -1,5 +1,7 @@
 import type { PrecisionMode } from "../lib/historyDb";
 
+export type TtsProvider = "webgpu" | "wasm";
+
 export interface SynthesizePayload {
   jobId: string;
   clientId: string;
@@ -8,6 +10,7 @@ export interface SynthesizePayload {
   precision: PrecisionMode;
   temperature: number;
   refAudio24k?: Float32Array;
+  forceCpu?: boolean;
 }
 
 export type WorkerInboundMessage =
@@ -30,6 +33,7 @@ export type WorkerOutboundMessage =
       clientId: string;
       stage: string;
       progress: number;
+      webGpuOperation?: boolean;
     }
   | {
       type: "result";
@@ -38,11 +42,12 @@ export type WorkerOutboundMessage =
       wavBuffer: ArrayBuffer;
       durationSec: number;
       elapsedMs: number;
-      provider: string;
+      provider: TtsProvider;
     }
   | {
       type: "error";
       jobId: string;
       clientId: string;
       message: string;
+      retryOnCpu?: boolean;
     };

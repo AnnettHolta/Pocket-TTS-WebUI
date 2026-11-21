@@ -55,6 +55,11 @@ describe("HardwareModal", () => {
     expect(host.textContent).toContain("NVIDIA GeForce RTX");
     expect(host.textContent).toContain("v128 SIMD");
     expect(host.textContent).toContain("2048 MB");
+
+    const memoryNote = host.querySelector('[role="note"]');
+    expect(memoryNote?.textContent).toContain("INT8 + FP32 4.74 GiB");
+    expect(memoryNote?.textContent).toContain("INT8 ~1.9 GB");
+    expect(memoryNote?.textContent).toContain("User-reported peak in a separate run");
   });
 });
 

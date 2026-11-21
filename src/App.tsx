@@ -1,20 +1,22 @@
-import { createMemo, createSignal, Match, onCleanup, onSettled, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, Match, onCleanup, onSettled, Show, Switch, untrack } from "solid-js";
 import type { LanguageOption } from "./components/InferenceSettings";
 import AppLayout, { type PageTab } from "./layout/AppLayout";
 import { decodeAndResampleTo24kMono } from "./lib/audioUtils";
+import createStoredList from "./lib/createStoredList";
 import {
   addHistoryItem,
   clearHistory,
   deleteHistoryItem,
   deleteSavedVoice,
-  listHistory,
-  listSavedVoices,
+  getVoiceTranscript,
+  listHistoryPage,
+  listSavedVoicesPage,
   type GenerationHistoryItem,
   type PrecisionMode,
   type VoiceTranscriptRecord,
 } from "./lib/historyDb";
 import { probeHardwareInfo, type HardwareInfo } from "./lib/hardwareInfo";
-import { encodeOgg } from "./lib/oggAudio";
+import { encodeOggOpus } from "./lib/oggAudio";
 import { getTtsClient } from "./lib/ttsClient";
 import { t } from "./i18n";
 import HistoryPage from "./pages/HistoryPage";
@@ -51,27 +53,31 @@ export default function App() {
   const [voiceSha256, setVoiceSha256] = createSignal<string | null>(null);
   const [voiceNeedsAttachment, setVoiceNeedsAttachment] = createSignal(false);
   const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
+  const [usingCpuFallback, setUsingCpuFallback] = createSignal(false);
   const [inferenceStage, setInferenceStage] = createSignal<string | null>(null);
   const [inferenceProgress, setInferenceProgress] = createSignal<number>(0);
   const [queueSnapshot, setQueueSnapshot] = createSignal<QueueSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [output, setOutput] = createSignal<{ url: string; name: string } | null>(null);
   const [hardwareInfo, setHardwareInfo] = createSignal<HardwareInfo | null>(null);
-  const [history, setHistory] = createSignal<GenerationHistoryItem[]>([]);
-  const [voices, setVoices] = createSignal<VoiceTranscriptRecord[]>([]);
   let generation: AbortController | null = null;
-  let voiceRefresh = 0;
+  let historyReuse = 0;
 
   const showError = (error: unknown) => setErrorMessage(error instanceof Error ? error.message : String(error));
-  const refreshVoices = async () => {
-    const revision = ++voiceRefresh;
-    try {
-      const items = await listSavedVoices();
-      if (revision === voiceRefresh) setVoices(items);
-    } catch (error) {
-      showError(error);
-    }
+  const history = createStoredList(
+    (request) => listHistoryPage(request, untrack(activePage) === "history"),
+    showError,
+  );
+  const voices = createStoredList(listSavedVoicesPage, showError);
+  const navigate = (page: PageTab) => {
+    historyReuse++;
+    setActivePage(page);
   };
+
+  createEffect(activePage, (page) => {
+    if (page === "history") void history.refresh();
+    if (page === "voices") void voices.refresh();
+  });
 
   onCleanup(() => {
     generation?.abort();
@@ -80,8 +86,12 @@ export default function App() {
   });
 
   const webGpuAvailable = createMemo(
-    () => hardwareInfo()?.webGpuAdapterReady ?? false
+    () => !usingCpuFallback() && (hardwareInfo()?.webGpuAdapterReady ?? false)
   );
+  const reportedHardware = createMemo((): HardwareInfo | null => {
+    const info = hardwareInfo();
+    return info && usingCpuFallback() ? { ...info, hardwareAcceleration: "CPU (WASM)" } : info;
+  });
 
   onSettled(() => {
     void fetch("/api/languages")
@@ -99,10 +109,7 @@ export default function App() {
     void probeHardwareInfo()
       .then((info) => setHardwareInfo(info))
       .catch((err) => console.error("Hardware probe error:", err));
-    void listHistory()
-      .then((items) => setHistory(items))
-      .catch(showError);
-    void refreshVoices();
+    void history.refresh();
 
     const client = getTtsClient();
     const unsub = client.subscribeQueue((snapshot) => {
@@ -126,7 +133,6 @@ export default function App() {
     setVoiceTranscript(payload.transcript);
     setVoiceSha256(payload.sha256);
     setVoiceNeedsAttachment(false);
-    void refreshVoices();
   };
 
   const handleClearVoice = () => {
@@ -211,16 +217,21 @@ export default function App() {
           refAudio24k,
         },
         (stage, progress) => {
-          setInferenceStage(stage);
+          setInferenceStage(usingCpuFallback() ? `CPU (WASM) · ${stage}` : stage);
           setInferenceProgress(progress);
         },
-        signal
+        signal,
+        () => {
+          setUsingCpuFallback(true);
+          setInferenceStage(t("studio.cpuRetry"));
+          setInferenceProgress(0);
+        },
       );
 
       setInferenceStage(t("studio.compressing"));
       setInferenceProgress(0.99);
       const wavBlob = new Blob([result.wavBuffer], { type: "audio/wav" });
-      const audio = await encodeOgg(wavBlob, "opus", signal);
+      const audio = await encodeOggOpus(wavBlob, { signal });
       signal.throwIfAborted();
       const previous = output();
       setOutput({ url: URL.createObjectURL(audio), name: generatedFileName });
@@ -243,7 +254,7 @@ export default function App() {
       };
 
       await addHistoryItem(entry);
-      setHistory((prev) => [entry, ...prev]);
+      await history.refresh();
     } catch (err) {
       if (!signal.aborted) showError(err);
     } finally {
@@ -254,15 +265,17 @@ export default function App() {
     }
   };
 
-  const handleReuseHistory = (item: GenerationHistoryItem) => {
+  const handleReuseHistory = async (item: GenerationHistoryItem) => {
+    const request = ++historyReuse;
+    const saved = item.voiceSha256 ? await getVoiceTranscript(item.voiceSha256) : null;
+    if (request !== historyReuse) return;
     setText(item.text);
     setSelectedLang(item.languageId);
     setPrecision(item.precision);
     setTemperature(item.temperature);
     handleClearVoice();
     if (item.voiceFileName || item.voiceSha256) {
-      const saved = voices().find((voice) => voice.sha256 === item.voiceSha256 && voice.audio);
-      if (saved) {
+      if (saved?.audio) {
         useSavedVoice(saved, item.voiceTranscript ?? "", item.voiceFilePath ?? "");
       } else {
         setVoicePath(item.voiceFilePath || item.voiceFileName || "");
@@ -276,27 +289,27 @@ export default function App() {
 
   const handleDeleteHistory = async (id: string) => {
     await deleteHistoryItem(id);
-    setHistory((prev) => prev.filter((item) => item.id !== id));
+    await history.refresh();
   };
 
   const handleClearHistory = async () => {
     await clearHistory();
-    setHistory([]);
+    await history.refresh();
   };
 
   const handleDeleteVoice = async (sha256: string) => {
     await deleteSavedVoice(sha256);
     if (voiceSha256() === sha256) handleClearVoice();
-    await refreshVoices();
+    await voices.refresh();
   };
 
   return (
     <AppLayout
       activePage={activePage()}
-      onNavigate={setActivePage}
-      historyCount={history().length}
+      onNavigate={navigate}
+      historyCount={history.result().totalItems}
       webGpuAvailable={webGpuAvailable()}
-      hardwareInfo={hardwareInfo()}
+      hardwareInfo={reportedHardware()}
     >
       <Show when={activePage() !== "studio" && errorMessage()}>
         <p class="studio-error" role="alert">
@@ -321,6 +334,7 @@ export default function App() {
             voiceTranscript={voiceTranscript()}
             voiceSha256={voiceSha256()}
             voiceNeedsAttachment={voiceNeedsAttachment()}
+            onUseSavedVoice={useSavedVoice}
             onApplyVoice={handleApplyVoice}
             onClearVoice={handleClearVoice}
             text={text()}
@@ -338,17 +352,21 @@ export default function App() {
         </Match>
         <Match when={activePage() === "history"}>
           <HistoryPage
-            items={history()}
-            onReuse={handleReuseHistory}
+            list={history}
+            onReuse={(item) => void handleReuseHistory(item).catch(showError)}
             onDelete={(id) => void handleDeleteHistory(id).catch(showError)}
             onClearAll={() => void handleClearHistory().catch(showError)}
           />
         </Match>
         <Match when={activePage() === "voices"}>
           <VoicesPage
-            voices={voices()}
+            list={voices}
+            activeVoiceHash={voiceFile() ? voiceSha256() : null}
             onUse={useSavedVoice}
-            onSaved={() => void refreshVoices()}
+            onSaved={(voice) => {
+              if (voice.sha256 && voice.sha256 === voiceSha256()) handleApplyVoice(voice);
+              void voices.refresh();
+            }}
             onDelete={(sha256) => void handleDeleteVoice(sha256).catch(showError)}
           />
         </Match>

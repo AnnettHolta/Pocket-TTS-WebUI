@@ -14,7 +14,7 @@ export interface AudioPlayerProps {
   src: string;
   downloadName?: string;
   downloadLabel?: string;
-  title?: string;
+  heading?: string;
 }
 
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.75, 2] as const;
@@ -128,7 +128,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
   return (
     <section class="audio-player">
       <div class="audio-player-header">
-        <span class="audio-player-title">{props.title ?? t("player.recentOutput")}</span>
+        <span class="audio-player-title">{props.heading ?? t("player.recentOutput")}</span>
         <Show when={props.downloadName}>
           {(name) => (
             <a
@@ -175,7 +175,6 @@ export default function AudioPlayer(props: AudioPlayerProps) {
             type="button"
             class="audio-square-btn"
             onClick={cycleSpeed}
-            title="Cycle playback speed (0.75x, 1.0x, 1.25x, 1.75x, 2.0x)"
             aria-label="Playback speed"
           >
             {formatSpeedLabel(SPEED_OPTIONS[speedIndex()])}
@@ -186,8 +185,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
               type="button"
               class={`audio-square-btn ${volumeOpen() ? "active" : ""}`}
               onClick={() => setVolumeOpen((v) => !v)}
-              title={`Volume: ${Math.round(volume() * 100)}%`}
-              aria-label="Toggle volume slider"
+              aria-label={`Toggle volume slider, volume ${Math.round(volume() * 100)}%`}
               aria-expanded={volumeOpen() ? "true" : "false"}
             >
               {volume() > 0 ? <TbOutlineVolume size={15} /> : <TbOutlineVolumeOff size={15} />}

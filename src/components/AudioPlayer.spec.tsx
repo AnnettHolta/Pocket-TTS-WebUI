@@ -32,7 +32,7 @@ describe("AudioPlayer", () => {
     const host = document.createElement("div");
     document.body.appendChild(host);
     dispose = render(
-      () => <AudioPlayer src="blob:test" downloadName="out.wav" title="Output" />,
+      () => <AudioPlayer src="blob:test" downloadName="out.wav" heading="Output" />,
       host
     );
 

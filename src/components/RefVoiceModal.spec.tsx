@@ -5,7 +5,7 @@ import RefVoiceModal from "./RefVoiceModal";
 const mockSaveVoiceTranscript = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("../lib/oggAudio", () => ({
-  encodeOgg: vi.fn(async () => new Blob(["OggS"], { type: "audio/ogg" })),
+  prepareReferenceAudio: vi.fn(async () => new Blob(["OggS"], { type: "audio/ogg" })),
 }));
 
 vi.mock("../lib/historyDb", async (importOriginal) => {

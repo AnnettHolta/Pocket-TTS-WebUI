@@ -5,7 +5,7 @@ import InferenceRefVoice from "../components/InferenceRefVoice";
 import InferenceSettings, { type LanguageOption } from "../components/InferenceSettings";
 import InferenceTextarea from "../components/InferenceTextarea";
 import { t } from "../i18n";
-import type { PrecisionMode } from "../lib/historyDb";
+import type { PrecisionMode, VoiceTranscriptRecord } from "../lib/historyDb";
 import "./StudioPage.css";
 
 export interface StudioPageProps {
@@ -21,6 +21,7 @@ export interface StudioPageProps {
   voiceTranscript: string;
   voiceSha256: string | null;
   voiceNeedsAttachment: boolean;
+  onUseSavedVoice: (voice: VoiceTranscriptRecord) => void;
   onApplyVoice: (payload: {
     file: File | null;
     path: string;
@@ -53,7 +54,7 @@ export default function StudioPage(props: StudioPageProps) {
       : stageText;
   };
   return (
-    <section class="card">
+    <section class="studio-page">
       <form onSubmit={(e) => props.onGenerate(e)}>
         <div class="studio-grid">
           <div class="studio-col-left">
@@ -72,12 +73,11 @@ export default function StudioPage(props: StudioPageProps) {
               voicePath={props.voicePath}
               voiceTranscript={props.voiceTranscript}
               voiceSha256={props.voiceSha256}
+              voiceNeedsAttachment={props.voiceNeedsAttachment}
+              onUseSavedVoice={props.onUseSavedVoice}
               onApplyVoice={props.onApplyVoice}
               onClear={props.onClearVoice}
             />
-            <Show when={props.voiceNeedsAttachment}>
-              <p class="hint" role="status">{t("refVoice.reattach")}</p>
-            </Show>
           </div>
 
           <div class="studio-col-right">
@@ -93,9 +93,6 @@ export default function StudioPage(props: StudioPageProps) {
                   >
                     <TbOutlineWand size={15} />
                     <span>{buttonLabel()}</span>
-                    <Show when={!props.isGenerating}>
-                      <kbd class="studio-kbd">⌘↵</kbd>
-                    </Show>
                   </button>
                   <Show when={props.isGenerating}>
                     <button type="button" class="btn btn-secondary" onClick={props.onCancel}>

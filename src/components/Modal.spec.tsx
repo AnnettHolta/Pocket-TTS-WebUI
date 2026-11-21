@@ -24,7 +24,7 @@ describe("Modal", () => {
     document.body.appendChild(host);
     dispose = render(
       () => (
-        <Modal open={true} title="Test Dialog" onClose={vi.fn()}>
+        <Modal open={true} heading="Test Dialog" onClose={vi.fn()}>
           <p class="body-copy">Projected content</p>
         </Modal>
       ),
@@ -41,7 +41,7 @@ describe("Modal", () => {
     document.body.appendChild(host);
     dispose = render(
       () => (
-        <Modal open={true} title="Closable" onClose={onClose}>
+        <Modal open={true} heading="Closable" onClose={onClose}>
           <span>Body</span>
         </Modal>
       ),

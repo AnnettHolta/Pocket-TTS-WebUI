@@ -1,11 +1,12 @@
-import { createEffect, Show } from "solid-js";
+import { createEffect, onCleanup, Show } from "solid-js";
 import type { JSX } from "@solidjs/web";
 import { TbOutlineX } from "solid-icons/tb";
 import "./Modal.css";
 
 export interface ModalProps {
   open: boolean;
-  title: string;
+  heading: string;
+  descriptionId?: string;
   onClose: () => void;
   busy?: boolean;
   children: JSX.Element;
@@ -13,6 +14,11 @@ export interface ModalProps {
 
 export default function Modal(props: ModalProps) {
   let dialogRef: HTMLDialogElement | undefined;
+  let disposed = false;
+  onCleanup(() => {
+    disposed = true;
+    if (dialogRef?.open) dialogRef.close();
+  });
 
   createEffect(
     () => props.open,
@@ -30,12 +36,13 @@ export default function Modal(props: ModalProps) {
     <dialog
       ref={dialogRef}
       class="modal-dialog"
-      aria-label={props.title}
+      aria-label={props.heading}
+      aria-describedby={props.descriptionId}
       onCancel={(event) => {
         if (props.busy) event.preventDefault();
       }}
       onClose={() => {
-        if (props.open) props.onClose();
+        if (!disposed && props.open) props.onClose();
       }}
       onClick={(e) => {
         if (e.target === dialogRef && !props.busy) {
@@ -45,7 +52,7 @@ export default function Modal(props: ModalProps) {
     >
       <Show when={props.open}>
         <div class="modal-header">
-          <h3 class="modal-title">{props.title}</h3>
+          <h3 class="modal-title">{props.heading}</h3>
           <button
             type="button"
             class="btn btn-ghost btn-sm"

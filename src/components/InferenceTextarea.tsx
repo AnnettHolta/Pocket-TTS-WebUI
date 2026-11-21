@@ -34,7 +34,7 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
             <button
               type="button"
               class="btn btn-ghost btn-sm textarea-clear"
-              title={t("textarea.clearTitle")}
+              aria-label={t("textarea.clearTitle")}
               onClick={() => props.onInput("")}
             >
               <TbOutlineX size={14} />

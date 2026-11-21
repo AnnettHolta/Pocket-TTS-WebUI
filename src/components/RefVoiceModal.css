@@ -28,6 +28,14 @@
   min-width: 0;
 }
 
+.ref-dropzone-copy {
+  min-width: 0;
+}
+
+.ref-dropzone > .btn {
+  flex-shrink: 0;
+}
+
 .ref-dropzone-icon {
   width: 34px;
   height: 34px;
@@ -51,22 +59,35 @@
 }
 
 .ref-dropzone-sub {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 
-.ref-modal-hash-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  flex-wrap: wrap;
+.ref-modal-status,
+.ref-modal-error {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
-.ref-modal-match {
+.ref-modal-error {
+  color: var(--color-danger);
+}
+
+.ref-modal-source summary {
+  cursor: pointer;
   font-size: var(--text-xs);
-  color: var(--color-accent-text);
+  color: var(--color-text-muted);
+}
+
+.ref-modal-source input {
+  margin-top: var(--space-2);
+}
+
+.ref-modal-body button:focus-visible,
+.ref-modal-source summary:focus-visible {
+  outline: 1px solid var(--color-border-focus);
+  outline-offset: 2px;
 }
 
 .ref-modal-textarea {
