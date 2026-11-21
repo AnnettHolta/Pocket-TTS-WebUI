@@ -13,6 +13,7 @@ import "./AudioPlayer.css";
 export interface AudioPlayerProps {
   src: string;
   downloadName?: string;
+  downloadLabel?: string;
   title?: string;
 }
 
@@ -136,7 +137,7 @@ export default function AudioPlayer(props: AudioPlayerProps) {
               download={name()}
             >
               <TbOutlineDownload size={13} />
-              <span>{t("player.downloadWav")}</span>
+              <span>{props.downloadLabel ?? t("player.downloadWav")}</span>
             </a>
           )}
         </Show>

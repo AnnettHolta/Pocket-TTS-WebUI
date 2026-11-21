@@ -464,6 +464,10 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
     currentLatent = nextLatent;
   }
 
+  if (!eosHit && generatedFrames.length === 200) {
+    throw new Error("This passage reached the speech length limit. Try splitting it into shorter sections.");
+  }
+
   // Decode generated latents with Mimi decoder using inputMetadata-typed state
   input.onProgress("Decoding waveform", 0.92);
   const decMetas = getInputMetas(pack.mimiDecoder);
@@ -481,6 +485,9 @@ export async function runPocketTtsSynthesis(input: RunSynthesisInput): Promise<{
 
   const pcmChunks: Float32Array[] = [];
   for (const frame of generatedFrames) {
+    if (pcmChunks.length % 8 === 0) {
+      input.onProgress("Decoding waveform", 0.92 + (pcmChunks.length / generatedFrames.length) * 0.05);
+    }
     const decFeeds: Record<string, ort.Tensor> = {
       ...decStateFeeds,
       [decLatentName]: new ort.Tensor("float32", frame, [1, 1, latentDim]),

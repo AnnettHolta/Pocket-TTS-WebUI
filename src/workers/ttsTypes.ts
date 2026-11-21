@@ -8,7 +8,6 @@ export interface SynthesizePayload {
   precision: PrecisionMode;
   temperature: number;
   refAudio24k?: Float32Array;
-  refTranscript?: string;
 }
 
 export type WorkerInboundMessage =

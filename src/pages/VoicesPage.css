@@ -1,0 +1,22 @@
+.voice-library,
+.voice-library-item {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.voice-library h2,
+.voice-library h3,
+.voice-library p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.voice-library-item p {
+  white-space: pre-wrap;
+}
+
+.voice-library-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

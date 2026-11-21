@@ -1,6 +1,7 @@
 import { createMemo, Show } from "solid-js";
 import { TbOutlineTrash } from "solid-icons/tb";
 import Table, { type TableColumn } from "../components/table/Table";
+import StoredAudio from "../components/StoredAudio";
 import { t } from "../i18n";
 import type { GenerationHistoryItem } from "../lib/historyDb";
 import "./HistoryPage.css";
@@ -73,6 +74,9 @@ export default function HistoryPage(props: HistoryPageProps) {
           </td>
           <td>
             <div class="history-cell-files">
+              <Show when={item.audio}>
+                {(audio) => <StoredAudio audio={audio()} name={item.generatedFileName} />}
+              </Show>
               <span class="history-file-line" title={item.generatedFileName}>
                 {item.generatedFileName}
               </span>

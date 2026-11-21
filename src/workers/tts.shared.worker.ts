@@ -11,6 +11,7 @@ import type {
 interface QueuedJob {
   payload: SynthesizePayload;
   port: MessagePort | null;
+  cancelled?: boolean;
 }
 
 const connectedPorts = new Set<MessagePort>();
@@ -48,10 +49,10 @@ function sendToPort(
   transfer?: Transferable[]
 ): void {
   if (port) {
-    if (transfer && transfer.length > 0) {
-      port.postMessage(msg, transfer);
-    } else {
-      port.postMessage(msg);
+    try {
+      port.postMessage(msg, transfer ?? []);
+    } catch {
+      connectedPorts.delete(port);
     }
     return;
   }
@@ -89,6 +90,7 @@ async function processQueue(): Promise<void> {
         temperature,
         refAudio24k,
         onProgress: (stage, progress) => {
+          if (next.cancelled) throw new Error("Generation cancelled.");
           sendToPort(next.port, {
             type: "progress",
             jobId,
@@ -99,6 +101,7 @@ async function processQueue(): Promise<void> {
         },
       });
 
+      if (next.cancelled) continue;
       const elapsedMs = Math.round(performance.now() - startedAt);
       sendToPort(
         next.port,
@@ -114,7 +117,7 @@ async function processQueue(): Promise<void> {
         [result.wavBuffer]
       );
     } catch (err) {
-      sendToPort(next.port, {
+      if (!next.cancelled) sendToPort(next.port, {
         type: "error",
         jobId,
         clientId,
@@ -136,8 +139,11 @@ function handleMessage(msg: WorkerInboundMessage, port: MessagePort | null): voi
   }
 
   if (msg.type === "cancel") {
+    const matches = (job: QueuedJob) =>
+      job.port === port && job.payload.jobId === msg.jobId && job.payload.clientId === msg.clientId;
+    if (activeJob && matches(activeJob)) activeJob.cancelled = true;
     const idx = jobQueue.findIndex(
-      (j) => j.payload.jobId === msg.jobId && j.payload.clientId === msg.clientId
+      matches
     );
     if (idx !== -1) {
       jobQueue.splice(idx, 1);

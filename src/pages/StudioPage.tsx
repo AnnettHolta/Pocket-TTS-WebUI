@@ -20,6 +20,7 @@ export interface StudioPageProps {
   voicePath: string;
   voiceTranscript: string;
   voiceSha256: string | null;
+  voiceNeedsAttachment: boolean;
   onApplyVoice: (payload: {
     file: File | null;
     path: string;
@@ -35,8 +36,9 @@ export interface StudioPageProps {
   queueLength: number;
   errorMessage: string | null;
   onDismissError: () => void;
-  audioUrl: string | null;
+  output: { url: string; name: string } | null;
   onGenerate: (e: Event) => void;
+  onCancel: () => void;
 }
 
 export default function StudioPage(props: StudioPageProps) {
@@ -73,6 +75,9 @@ export default function StudioPage(props: StudioPageProps) {
               onApplyVoice={props.onApplyVoice}
               onClear={props.onClearVoice}
             />
+            <Show when={props.voiceNeedsAttachment}>
+              <p class="hint" role="status">{t("refVoice.reattach")}</p>
+            </Show>
           </div>
 
           <div class="studio-col-right">
@@ -80,17 +85,24 @@ export default function StudioPage(props: StudioPageProps) {
               value={props.text}
               onInput={props.onTextInput}
               footer={
-                <button
-                  type="submit"
-                  class="btn btn-primary studio-generate-btn"
-                  disabled={props.isGenerating || !props.text.trim()}
-                >
-                  <TbOutlineWand size={15} />
-                  <span>{buttonLabel()}</span>
-                  <Show when={!props.isGenerating}>
-                    <kbd class="studio-kbd">⌘↵</kbd>
+                <div class="studio-generate-actions">
+                  <button
+                    type="submit"
+                    class="btn btn-primary studio-generate-btn"
+                    disabled={props.isGenerating || props.voiceNeedsAttachment || !props.text.trim()}
+                  >
+                    <TbOutlineWand size={15} />
+                    <span>{buttonLabel()}</span>
+                    <Show when={!props.isGenerating}>
+                      <kbd class="studio-kbd">⌘↵</kbd>
+                    </Show>
+                  </button>
+                  <Show when={props.isGenerating}>
+                    <button type="button" class="btn btn-secondary" onClick={props.onCancel}>
+                      {t("refVoice.cancel")}
+                    </button>
                   </Show>
-                </button>
+                </div>
               }
             />
 
@@ -112,12 +124,13 @@ export default function StudioPage(props: StudioPageProps) {
         </div>
       </form>
 
-      <Show when={props.audioUrl}>
-        {(url) => (
+      <Show when={props.output}>
+        {(output) => (
           <div class="studio-output">
             <AudioPlayer
-              src={url()}
-              downloadName={`pocket-tts-${props.selectedLang}.wav`}
+              src={output().url}
+              downloadName={output().name}
+              downloadLabel={t("player.downloadOgg")}
             />
           </div>
         )}

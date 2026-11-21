@@ -21,9 +21,11 @@ function detectInitialLocale(): Locale {
 }
 
 const [locale, setLocaleSignal] = createSignal<Locale>(detectInitialLocale());
+document.documentElement.lang = locale();
 
 export function setLocale(next: Locale): void {
   setLocaleSignal(next);
+  document.documentElement.lang = next;
   try {
     localStorage.setItem(STORAGE_KEY, next);
   } catch {

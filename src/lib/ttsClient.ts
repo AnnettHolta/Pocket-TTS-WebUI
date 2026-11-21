@@ -1,134 +1,169 @@
-import type {
+﻿import type {
   QueueSnapshot,
   SynthesizePayload,
   WorkerInboundMessage,
   WorkerOutboundMessage,
 } from "../workers/ttsTypes";
 
-export type TtsProgressHandler = (stage: string, progress: number) => void;
-export type TtsQueueHandler = (snapshot: QueueSnapshot) => void;
+type ProgressHandler = (stage: string, progress: number) => void;
+type QueueHandler = (snapshot: QueueSnapshot) => void;
 
 interface PendingJob {
-  resolve: (res: {
-    wavBuffer: ArrayBuffer;
-    durationSec: number;
-    elapsedMs: number;
-    provider: string;
-  }) => void;
-  reject: (err: Error) => void;
-  onProgress?: TtsProgressHandler;
+  receive: (message: Exclude<WorkerOutboundMessage, { type: "queue" }>) => void;
+  fail: (error: Error) => void;
 }
+
+const IDLE_TIMEOUT_MS = 5 * 60_000;
+const EMPTY_QUEUE: QueueSnapshot = {
+  activeJobId: null,
+  activeClientId: null,
+  queuedJobIds: [],
+  queueLength: 0,
+};
 
 class TtsSharedClient {
   readonly clientId = crypto.randomUUID();
-  private postFn: (msg: WorkerInboundMessage, transfer?: Transferable[]) => void;
+  private connection: {
+    post: (message: WorkerInboundMessage, transfer?: Transferable[]) => void;
+    close: () => void;
+  } | null = null;
+  private useSharedWorker = typeof SharedWorker !== "undefined";
   private pending = new Map<string, PendingJob>();
-  private queueListeners = new Set<TtsQueueHandler>();
+  private queueListeners = new Set<QueueHandler>();
 
-  constructor() {
-    if (typeof SharedWorker !== "undefined") {
-      const worker = new SharedWorker(
-        new URL("../workers/tts.shared.worker.ts", import.meta.url),
-        { type: "module", name: "pocket-tts-shared-worker" }
-      );
-      worker.port.onmessage = (e: MessageEvent<WorkerOutboundMessage>) => {
-        this.handleOutbound(e.data);
-      };
-      worker.port.start();
-      this.postFn = (msg, transfer) => {
-        if (transfer && transfer.length > 0) {
-          worker.port.postMessage(msg, transfer);
-        } else {
-          worker.port.postMessage(msg);
-        }
-      };
-    } else {
-      const worker = new Worker(
-        new URL("../workers/tts.shared.worker.ts", import.meta.url),
-        { type: "module" }
-      );
-      worker.onmessage = (e: MessageEvent<WorkerOutboundMessage>) => {
-        this.handleOutbound(e.data);
-      };
-      this.postFn = (msg, transfer) => {
-        if (transfer && transfer.length > 0) {
-          worker.postMessage(msg, transfer);
-        } else {
-          worker.postMessage(msg);
-        }
-      };
+  private connect() {
+    if (this.connection) return this.connection;
+    const receive = (event: MessageEvent<WorkerOutboundMessage>) => {
+      const msg = event.data;
+      if (msg.type === "queue") {
+        this.emitQueue(msg.snapshot);
+      } else if (msg.clientId === this.clientId) {
+        this.pending.get(msg.jobId)?.receive(msg);
+      }
+    };
+
+    if (this.useSharedWorker) {
+      try {
+        const worker = new SharedWorker(new URL("../workers/tts.shared.worker.ts", import.meta.url), {
+          type: "module",
+          name: "pocket-tts-shared-worker",
+        });
+        const close = () => {
+          worker.onerror = null;
+          worker.port.onmessage = null;
+          worker.port.onmessageerror = null;
+          worker.port.close();
+        };
+        const fail = () => {
+          this.useSharedWorker = false;
+          this.reset(new Error("The shared speech worker stopped. Retry to use a dedicated worker."));
+        };
+        worker.onerror = fail;
+        worker.port.onmessage = receive;
+        worker.port.onmessageerror = fail;
+        worker.port.start();
+        return this.connection = { post: (msg, transfer = []) => worker.port.postMessage(msg, transfer), close };
+      } catch {
+        this.useSharedWorker = false;
+      }
     }
 
-    this.postFn({ type: "ping" });
+    const worker = new Worker(new URL("../workers/tts.shared.worker.ts", import.meta.url), { type: "module" });
+    const fail = () => this.reset(new Error("The speech worker stopped. Try generating again."));
+    worker.onerror = fail;
+    worker.onmessageerror = fail;
+    worker.onmessage = receive;
+    return this.connection = {
+      post: (msg, transfer = []) => worker.postMessage(msg, transfer),
+      close: () => {
+        worker.onerror = null;
+        worker.onmessage = null;
+        worker.onmessageerror = null;
+        worker.terminate();
+      },
+    };
   }
 
-  subscribeQueue(listener: TtsQueueHandler): () => void {
+  private emitQueue(snapshot: QueueSnapshot) {
+    for (const listener of this.queueListeners) listener(snapshot);
+  }
+
+  private reset(error: Error) {
+    this.connection?.close();
+    this.connection = null;
+    for (const job of this.pending.values()) job.fail(error);
+    this.emitQueue(EMPTY_QUEUE);
+  }
+
+  subscribeQueue(listener: QueueHandler): () => void {
     this.queueListeners.add(listener);
-    return () => this.queueListeners.delete(listener);
+    return () => { this.queueListeners.delete(listener); };
   }
 
   synthesize(
     params: Omit<SynthesizePayload, "jobId" | "clientId">,
-    onProgress?: TtsProgressHandler
-  ): Promise<{
-    wavBuffer: ArrayBuffer;
-    durationSec: number;
-    elapsedMs: number;
-    provider: string;
-  }> {
-    const jobId = crypto.randomUUID();
-    const payload: SynthesizePayload = {
-      ...params,
-      jobId,
-      clientId: this.clientId,
-    };
-
-    const transfer: Transferable[] = [];
-    if (payload.refAudio24k) {
-      transfer.push(payload.refAudio24k.buffer);
-    }
-
+    onProgress: ProgressHandler,
+    signal: AbortSignal
+  ): Promise<Extract<WorkerOutboundMessage, { type: "result" }>> {
     return new Promise((resolve, reject) => {
-      this.pending.set(jobId, { resolve, reject, onProgress });
-      this.postFn({ type: "synthesize", payload }, transfer);
-    });
-  }
-
-  private handleOutbound(msg: WorkerOutboundMessage): void {
-    if (msg.type === "queue") {
-      for (const listener of this.queueListeners) {
-        listener(msg.snapshot);
-      }
-      return;
-    }
-
-    if (msg.clientId !== this.clientId) return;
-    const job = this.pending.get(msg.jobId);
-    if (!job) return;
-
-    if (msg.type === "progress") {
-      job.onProgress?.(msg.stage, msg.progress);
-    } else if (msg.type === "result") {
-      this.pending.delete(msg.jobId);
-      job.resolve({
-        wavBuffer: msg.wavBuffer,
-        durationSec: msg.durationSec,
-        elapsedMs: msg.elapsedMs,
-        provider: msg.provider,
+      signal.throwIfAborted();
+      const connection = this.connect();
+      const jobId = crypto.randomUUID();
+      const payload = { ...params, jobId, clientId: this.clientId };
+      let idleTimer: ReturnType<typeof setTimeout>;
+      const cleanup = () => {
+        clearTimeout(idleTimer);
+        signal.removeEventListener("abort", abort);
+        this.pending.delete(jobId);
+      };
+      const fail = (error: Error) => {
+        cleanup();
+        reject(error);
+      };
+      const abort = () => {
+        try {
+          connection.post({ type: "cancel", jobId, clientId: this.clientId });
+        } catch {
+          // A dead connection is reset by its error handler or the next failed post.
+        } finally {
+          fail(signal.reason);
+        }
+      };
+      const resetIdleTimer = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          this.useSharedWorker = false;
+          this.reset(new Error("The speech worker stopped responding. Try generating again."));
+        }, IDLE_TIMEOUT_MS);
+      };
+      this.pending.set(jobId, {
+        fail,
+        receive: (message) => {
+          if (message.type === "progress") {
+            resetIdleTimer();
+            onProgress(message.stage, message.progress);
+          } else if (message.type === "result") {
+            cleanup();
+            resolve(message);
+          } else {
+            fail(new Error(message.message));
+          }
+        },
       });
-    } else if (msg.type === "error") {
-      this.pending.delete(msg.jobId);
-      job.reject(new Error(msg.message));
-    }
+      signal.addEventListener("abort", abort, { once: true });
+      resetIdleTimer();
+      try {
+        connection.post({ type: "synthesize", payload }, params.refAudio24k ? [params.refAudio24k.buffer] : []);
+      } catch (error) {
+        this.useSharedWorker = false;
+        this.reset(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
   }
 }
 
 let singletonClient: TtsSharedClient | null = null;
 
 export function getTtsClient(): TtsSharedClient {
-  if (!singletonClient) {
-    singletonClient = new TtsSharedClient();
-  }
-  return singletonClient;
+  return singletonClient ??= new TtsSharedClient();
 }
-

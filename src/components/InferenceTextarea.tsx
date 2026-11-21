@@ -25,6 +25,7 @@ export default function InferenceTextarea(props: InferenceTextareaProps) {
         <div class="textarea-wrap">
           <textarea
             id="prompt"
+            maxlength={2000}
             value={props.value}
             onInput={(e) => props.onInput(e.currentTarget.value)}
             placeholder={t("textarea.placeholder")}

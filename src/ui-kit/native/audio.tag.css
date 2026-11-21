@@ -3,3 +3,13 @@ audio {
   max-width: 100%;
 }
 
+.stored-audio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stored-audio audio {
+  width: min(100%, 17rem);
+}

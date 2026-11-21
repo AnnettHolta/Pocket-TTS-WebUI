@@ -4,6 +4,10 @@ import RefVoiceModal from "./RefVoiceModal";
 
 const mockSaveVoiceTranscript = vi.fn().mockResolvedValue(undefined);
 
+vi.mock("../lib/oggAudio", () => ({
+  encodeOgg: vi.fn(async () => new Blob(["OggS"], { type: "audio/ogg" })),
+}));
+
 vi.mock("../lib/historyDb", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/historyDb")>();
   return {
@@ -46,7 +50,7 @@ describe("RefVoiceModal", () => {
     vi.clearAllMocks();
   });
 
-  it("saves transcript and calls onApply + onClose", async () => {
+  it("saves compressed reference audio and transcript, then applies the saved audio", async () => {
     const onApply = vi.fn();
     const onClose = vi.fn();
     const file = new File(["wav"], "ref.wav", { type: "audio/wav" });
@@ -72,15 +76,19 @@ describe("RefVoiceModal", () => {
     saveBtn.click();
 
     await vi.waitFor(() => {
-      expect(mockSaveVoiceTranscript).toHaveBeenCalledTimes(1);
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
+    expect(mockSaveVoiceTranscript).toHaveBeenCalledWith(expect.objectContaining({
+      sha256: "deadbeef12345678",
+      transcript: "Initial transcript",
+      audio: expect.any(Blob),
+    }));
     expect(onApply).toHaveBeenCalledWith({
-      file,
+      file: expect.objectContaining({ name: "ref.wav", type: "audio/ogg" }),
       path: "C:\\voices\\ref.wav",
       transcript: "Initial transcript",
       sha256: "deadbeef12345678",
     });
-    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
 

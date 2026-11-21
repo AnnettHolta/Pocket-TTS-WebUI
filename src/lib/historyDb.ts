@@ -1,4 +1,4 @@
-export type PrecisionMode = "mixed" | "int8";
+﻿export type PrecisionMode = "mixed" | "int8";
 
 export interface GenerationHistoryItem {
   id: string;
@@ -13,6 +13,7 @@ export interface GenerationHistoryItem {
   voiceTranscript?: string | null;
   voiceSha256?: string | null;
   generatedFileName: string;
+  audio?: Blob;
 }
 
 export interface VoiceTranscriptRecord {
@@ -21,6 +22,7 @@ export interface VoiceTranscriptRecord {
   filePath: string | null;
   transcript: string;
   updatedAt: number;
+  audio?: Blob;
 }
 
 const DB_NAME = "pocket-tts-webui";
@@ -48,98 +50,62 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+async function requestResult<T>(
+  store: string,
+  mode: IDBTransactionMode,
+  run: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
+  const db = await openDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const transaction = db.transaction(store, mode);
+      const request = run(transaction.objectStore(store));
+      transaction.oncomplete = () => resolve(request.result);
+      transaction.onabort = () =>
+        reject(request.error ?? transaction.error ?? new Error("Browser storage operation failed."));
+    });
+  } finally {
+    db.close();
+  }
+}
+
 export async function computeFileSha256(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer();
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
-  const bytes = new Uint8Array(digest);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export async function getVoiceTranscript(
-  sha256: string
-): Promise<VoiceTranscriptRecord | null> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(VOICE_TRANSCRIPT_STORE, "readonly");
-    const store = tx.objectStore(VOICE_TRANSCRIPT_STORE);
-    const request = store.get(sha256);
-
-    request.onsuccess = () =>
-      resolve((request.result as VoiceTranscriptRecord | undefined) ?? null);
-    request.onerror = () =>
-      reject(request.error ?? new Error("Failed to read voice transcript"));
-    tx.oncomplete = () => db.close();
-  });
+export async function getVoiceTranscript(sha256: string): Promise<VoiceTranscriptRecord | null> {
+  return (await requestResult(VOICE_TRANSCRIPT_STORE, "readonly", (store) => store.get(sha256))) ?? null;
 }
 
-export async function saveVoiceTranscript(
-  record: VoiceTranscriptRecord
-): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(VOICE_TRANSCRIPT_STORE, "readwrite");
-    const store = tx.objectStore(VOICE_TRANSCRIPT_STORE);
-    const request = store.put(record);
+export async function listSavedVoices(): Promise<VoiceTranscriptRecord[]> {
+  const records: VoiceTranscriptRecord[] = await requestResult(
+    VOICE_TRANSCRIPT_STORE, "readonly", (store) => store.getAll()
+  );
+  return records.filter((voice) => Boolean(voice.audio)).sort((a, b) => b.updatedAt - a.updatedAt);
+}
 
-    request.onsuccess = () => resolve();
-    request.onerror = () =>
-      reject(request.error ?? new Error("Failed to save voice transcript"));
-    tx.oncomplete = () => db.close();
-  });
+export async function saveVoiceTranscript(record: VoiceTranscriptRecord): Promise<void> {
+  await requestResult(VOICE_TRANSCRIPT_STORE, "readwrite", (store) => store.put(record));
+}
+
+export async function deleteSavedVoice(sha256: string): Promise<void> {
+  await requestResult(VOICE_TRANSCRIPT_STORE, "readwrite", (store) => store.delete(sha256));
 }
 
 export async function listHistory(): Promise<GenerationHistoryItem[]> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(HISTORY_STORE, "readonly");
-    const store = tx.objectStore(HISTORY_STORE);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      const items = (request.result as GenerationHistoryItem[]) ?? [];
-      items.sort((a, b) => b.createdAt - a.createdAt);
-      resolve(items);
-    };
-    request.onerror = () => reject(request.error ?? new Error("Failed to read history"));
-    tx.oncomplete = () => db.close();
-  });
+  const items: GenerationHistoryItem[] = await requestResult(HISTORY_STORE, "readonly", (store) => store.getAll());
+  return items.sort((a, b) => b.createdAt - a.createdAt);
 }
 
 export async function addHistoryItem(item: GenerationHistoryItem): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(HISTORY_STORE, "readwrite");
-    const store = tx.objectStore(HISTORY_STORE);
-    const request = store.put(item);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error ?? new Error("Failed to save history item"));
-    tx.oncomplete = () => db.close();
-  });
+  await requestResult(HISTORY_STORE, "readwrite", (store) => store.put(item));
 }
 
 export async function deleteHistoryItem(id: string): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(HISTORY_STORE, "readwrite");
-    const store = tx.objectStore(HISTORY_STORE);
-    const request = store.delete(id);
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error ?? new Error("Failed to delete history item"));
-    tx.oncomplete = () => db.close();
-  });
+  await requestResult(HISTORY_STORE, "readwrite", (store) => store.delete(id));
 }
 
 export async function clearHistory(): Promise<void> {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(HISTORY_STORE, "readwrite");
-    const store = tx.objectStore(HISTORY_STORE);
-    const request = store.clear();
-
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error ?? new Error("Failed to clear history"));
-    tx.oncomplete = () => db.close();
-  });
+  await requestResult(HISTORY_STORE, "readwrite", (store) => store.clear());
 }

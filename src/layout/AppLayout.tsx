@@ -7,6 +7,7 @@ import {
   TbOutlineDatabase,
   TbOutlineExternalLink,
   TbOutlineHistory,
+  TbOutlineMicrophone,
   TbOutlineSparkles,
 } from "solid-icons/tb";
 import Badge from "../components/Badge";
@@ -15,7 +16,7 @@ import { locale, LOCALE_OPTIONS, setLocale, t, type Locale } from "../i18n";
 import type { HardwareInfo } from "../lib/hardwareInfo";
 import "./AppLayout.css";
 
-export type PageTab = "studio" | "history";
+export type PageTab = "studio" | "history" | "voices";
 
 export interface AppLayoutProps {
   activePage: PageTab;
@@ -113,6 +114,14 @@ export default function AppLayout(props: AppLayoutProps) {
             <TbOutlineHistory size={14} />
             <span>{t("nav.history", { count: props.historyCount })}</span>
           </button>
+          <button
+            type="button"
+            class={`app-nav-tab icon-label ${props.activePage === "voices" ? "active" : ""}`}
+            onClick={() => props.onNavigate("voices")}
+          >
+            <TbOutlineMicrophone size={14} />
+            <span>{t("nav.voices")}</span>
+          </button>
         </nav>
       </header>
 
@@ -162,6 +171,15 @@ export default function AppLayout(props: AppLayoutProps) {
         >
           <TbOutlineHistory size={18} />
           <span>{t("nav.historyShort")}</span>
+        </button>
+
+        <button
+          type="button"
+          class={`app-mobile-tab ${props.activePage === "voices" ? "active" : ""}`}
+          onClick={() => props.onNavigate("voices")}
+        >
+          <TbOutlineMicrophone size={18} />
+          <span>{t("nav.voices")}</span>
         </button>
 
         <button

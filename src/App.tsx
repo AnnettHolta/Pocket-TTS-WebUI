@@ -1,4 +1,4 @@
-import { createMemo, createSignal, Match, onSettled, Switch } from "solid-js";
+import { createMemo, createSignal, Match, onCleanup, onSettled, Show, Switch } from "solid-js";
 import type { LanguageOption } from "./components/InferenceSettings";
 import AppLayout, { type PageTab } from "./layout/AppLayout";
 import { decodeAndResampleTo24kMono } from "./lib/audioUtils";
@@ -6,14 +6,20 @@ import {
   addHistoryItem,
   clearHistory,
   deleteHistoryItem,
+  deleteSavedVoice,
   listHistory,
+  listSavedVoices,
   type GenerationHistoryItem,
   type PrecisionMode,
+  type VoiceTranscriptRecord,
 } from "./lib/historyDb";
 import { probeHardwareInfo, type HardwareInfo } from "./lib/hardwareInfo";
+import { encodeOgg } from "./lib/oggAudio";
 import { getTtsClient } from "./lib/ttsClient";
+import { t } from "./i18n";
 import HistoryPage from "./pages/HistoryPage";
 import StudioPage from "./pages/StudioPage";
+import VoicesPage from "./pages/VoicesPage";
 import type { QueueSnapshot } from "./workers/ttsTypes";
 
 const PLACEHOLDER_LANGUAGES: LanguageOption[] = [
@@ -27,7 +33,7 @@ const PLACEHOLDER_LANGUAGES: LanguageOption[] = [
 
 function buildGeneratedFilename(languageId: string, ts: number): string {
   const iso = new Date(ts).toISOString().replace(/[:.]/g, "-").slice(0, 19);
-  return `pocket-tts-${languageId}-${iso}.wav`;
+  return `pocket-tts-${languageId}-${iso}.ogg`;
 }
 
 export default function App() {
@@ -43,14 +49,35 @@ export default function App() {
   const [voicePath, setVoicePath] = createSignal<string>("");
   const [voiceTranscript, setVoiceTranscript] = createSignal<string>("");
   const [voiceSha256, setVoiceSha256] = createSignal<string | null>(null);
+  const [voiceNeedsAttachment, setVoiceNeedsAttachment] = createSignal(false);
   const [isGenerating, setIsGenerating] = createSignal<boolean>(false);
   const [inferenceStage, setInferenceStage] = createSignal<string | null>(null);
   const [inferenceProgress, setInferenceProgress] = createSignal<number>(0);
   const [queueSnapshot, setQueueSnapshot] = createSignal<QueueSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
-  const [audioUrl, setAudioUrl] = createSignal<string | null>(null);
+  const [output, setOutput] = createSignal<{ url: string; name: string } | null>(null);
   const [hardwareInfo, setHardwareInfo] = createSignal<HardwareInfo | null>(null);
   const [history, setHistory] = createSignal<GenerationHistoryItem[]>([]);
+  const [voices, setVoices] = createSignal<VoiceTranscriptRecord[]>([]);
+  let generation: AbortController | null = null;
+  let voiceRefresh = 0;
+
+  const showError = (error: unknown) => setErrorMessage(error instanceof Error ? error.message : String(error));
+  const refreshVoices = async () => {
+    const revision = ++voiceRefresh;
+    try {
+      const items = await listSavedVoices();
+      if (revision === voiceRefresh) setVoices(items);
+    } catch (error) {
+      showError(error);
+    }
+  };
+
+  onCleanup(() => {
+    generation?.abort();
+    const result = output();
+    if (result) URL.revokeObjectURL(result.url);
+  });
 
   const webGpuAvailable = createMemo(
     () => hardwareInfo()?.webGpuAdapterReady ?? false
@@ -74,7 +101,8 @@ export default function App() {
       .catch((err) => console.error("Hardware probe error:", err));
     void listHistory()
       .then((items) => setHistory(items))
-      .catch((err) => console.error("IndexedDB load error:", err));
+      .catch(showError);
+    void refreshVoices();
 
     const client = getTtsClient();
     const unsub = client.subscribeQueue((snapshot) => {
@@ -97,6 +125,8 @@ export default function App() {
     setVoicePath(payload.path);
     setVoiceTranscript(payload.transcript);
     setVoiceSha256(payload.sha256);
+    setVoiceNeedsAttachment(false);
+    void refreshVoices();
   };
 
   const handleClearVoice = () => {
@@ -104,13 +134,27 @@ export default function App() {
     setVoicePath("");
     setVoiceTranscript("");
     setVoiceSha256(null);
+    setVoiceNeedsAttachment(false);
+  };
+
+  const useSavedVoice = (voice: VoiceTranscriptRecord, transcript = voice.transcript, path = voice.filePath ?? "") => {
+    if (!voice.audio) return;
+    setVoiceFile(new File([voice.audio], voice.fileName, { type: voice.audio.type }));
+    setVoicePath(path);
+    setVoiceTranscript(transcript);
+    setVoiceSha256(voice.sha256);
+    setVoiceNeedsAttachment(false);
+    setActivePage("studio");
   };
 
   const handleGenerate = async (e: Event) => {
     e.preventDefault();
     const promptText = text().trim();
-    if (!promptText || isGenerating()) return;
+    if (!promptText || isGenerating() || voiceNeedsAttachment()) return;
 
+    const controller = new AbortController();
+    generation = controller;
+    const { signal } = controller;
     setIsGenerating(true);
     setErrorMessage(null);
     setInferenceStage("Queued");
@@ -121,6 +165,10 @@ export default function App() {
     const languageId = selectedLang();
     const precisionMode = precision();
     const file = voiceFile();
+    const submittedTemperature = temperature();
+    const submittedVoicePath = voicePath().trim() || null;
+    const submittedVoiceTranscript = voiceTranscript().trim() || null;
+    const submittedVoiceHash = voiceSha256();
     const generatedFileName = buildGeneratedFilename(languageId, now);
 
     try {
@@ -130,6 +178,7 @@ export default function App() {
         `/api/languages/${encodeURIComponent(languageId)}/prepare`,
         {
           method: "POST",
+          signal,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             precision: precisionMode,
@@ -150,6 +199,7 @@ export default function App() {
         setInferenceStage("Resampling reference audio");
         refAudio24k = await decodeAndResampleTo24kMono(file);
       }
+      signal.throwIfAborted();
 
       const client = getTtsClient();
       const result = await client.synthesize(
@@ -157,20 +207,24 @@ export default function App() {
           text: promptText,
           languageId,
           precision: precisionMode,
-          temperature: temperature(),
+          temperature: submittedTemperature,
           refAudio24k,
-          refTranscript: voiceTranscript().trim() || undefined,
         },
         (stage, progress) => {
           setInferenceStage(stage);
           setInferenceProgress(progress);
-        }
+        },
+        signal
       );
 
-      const prevUrl = audioUrl();
-      if (prevUrl) URL.revokeObjectURL(prevUrl);
+      setInferenceStage(t("studio.compressing"));
+      setInferenceProgress(0.99);
       const wavBlob = new Blob([result.wavBuffer], { type: "audio/wav" });
-      setAudioUrl(URL.createObjectURL(wavBlob));
+      const audio = await encodeOgg(wavBlob, "opus", signal);
+      signal.throwIfAborted();
+      const previous = output();
+      setOutput({ url: URL.createObjectURL(audio), name: generatedFileName });
+      if (previous) URL.revokeObjectURL(previous.url);
 
       const entry: GenerationHistoryItem = {
         id: crypto.randomUUID(),
@@ -179,20 +233,21 @@ export default function App() {
         languageId,
         languageLabel: lang?.label ?? languageId,
         precision: precisionMode,
-        temperature: temperature(),
+        temperature: submittedTemperature,
         voiceFileName: file ? file.name : null,
-        voiceFilePath: voicePath().trim() || null,
-        voiceTranscript: voiceTranscript().trim() || null,
-        voiceSha256: voiceSha256(),
+        voiceFilePath: submittedVoicePath,
+        voiceTranscript: submittedVoiceTranscript,
+        voiceSha256: submittedVoiceHash,
         generatedFileName,
+        audio,
       };
 
       await addHistoryItem(entry);
       setHistory((prev) => [entry, ...prev]);
     } catch (err) {
-      console.error("Inference error:", err);
-      setErrorMessage(err instanceof Error ? err.message : String(err));
+      if (!signal.aborted) showError(err);
     } finally {
+      generation = null;
       setIsGenerating(false);
       setInferenceStage(null);
       setInferenceProgress(0);
@@ -204,9 +259,18 @@ export default function App() {
     setSelectedLang(item.languageId);
     setPrecision(item.precision);
     setTemperature(item.temperature);
-    setVoicePath(item.voiceFilePath ?? "");
-    setVoiceTranscript(item.voiceTranscript ?? "");
-    setVoiceSha256(item.voiceSha256 ?? null);
+    handleClearVoice();
+    if (item.voiceFileName || item.voiceSha256) {
+      const saved = voices().find((voice) => voice.sha256 === item.voiceSha256 && voice.audio);
+      if (saved) {
+        useSavedVoice(saved, item.voiceTranscript ?? "", item.voiceFilePath ?? "");
+      } else {
+        setVoicePath(item.voiceFilePath || item.voiceFileName || "");
+        setVoiceTranscript(item.voiceTranscript ?? "");
+        setVoiceSha256(item.voiceSha256 ?? null);
+        setVoiceNeedsAttachment(true);
+      }
+    }
     setActivePage("studio");
   };
 
@@ -220,6 +284,12 @@ export default function App() {
     setHistory([]);
   };
 
+  const handleDeleteVoice = async (sha256: string) => {
+    await deleteSavedVoice(sha256);
+    if (voiceSha256() === sha256) handleClearVoice();
+    await refreshVoices();
+  };
+
   return (
     <AppLayout
       activePage={activePage()}
@@ -228,6 +298,14 @@ export default function App() {
       webGpuAvailable={webGpuAvailable()}
       hardwareInfo={hardwareInfo()}
     >
+      <Show when={activePage() !== "studio" && errorMessage()}>
+        <p class="studio-error" role="alert">
+          {errorMessage()}
+          <button type="button" class="btn btn-ghost btn-sm" onClick={() => setErrorMessage(null)}>
+            {t("studio.dismiss")}
+          </button>
+        </p>
+      </Show>
       <Switch>
         <Match when={activePage() === "studio"}>
           <StudioPage
@@ -242,6 +320,7 @@ export default function App() {
             voicePath={voicePath()}
             voiceTranscript={voiceTranscript()}
             voiceSha256={voiceSha256()}
+            voiceNeedsAttachment={voiceNeedsAttachment()}
             onApplyVoice={handleApplyVoice}
             onClearVoice={handleClearVoice}
             text={text()}
@@ -252,16 +331,25 @@ export default function App() {
             queueLength={queueSnapshot()?.queueLength ?? 0}
             errorMessage={errorMessage()}
             onDismissError={() => setErrorMessage(null)}
-            audioUrl={audioUrl()}
+            output={output()}
             onGenerate={handleGenerate}
+            onCancel={() => generation?.abort()}
           />
         </Match>
         <Match when={activePage() === "history"}>
           <HistoryPage
             items={history()}
             onReuse={handleReuseHistory}
-            onDelete={(id) => void handleDeleteHistory(id)}
-            onClearAll={() => void handleClearHistory()}
+            onDelete={(id) => void handleDeleteHistory(id).catch(showError)}
+            onClearAll={() => void handleClearHistory().catch(showError)}
+          />
+        </Match>
+        <Match when={activePage() === "voices"}>
+          <VoicesPage
+            voices={voices()}
+            onUse={useSavedVoice}
+            onSaved={() => void refreshVoices()}
+            onDelete={(sha256) => void handleDeleteVoice(sha256).catch(showError)}
           />
         </Match>
       </Switch>
